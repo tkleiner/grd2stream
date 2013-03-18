@@ -1,0 +1,23 @@
+## files after ./bootstrap.sh
+Makefile.in
+aclocal.m4
+admin/
+autom4te.cache/
+config.h.in
+configure
+m4/Makefile.in
+src/Makefile.in
+
+## files after configure
+Makefile
+config.h
+config.log
+config.status
+m4/Makefile
+src/.deps/
+src/Makefile
+stamp-h1
+
+## files after make
+src/grd2stream
+*.o
