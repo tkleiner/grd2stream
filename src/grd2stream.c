@@ -1,13 +1,13 @@
+#ifndef LAST_UPDATE
+#define LAST_UPDATE "Time-stamp: <2013-03-19 11:45:56 (tkleiner)>"
+#endif
+
 /*
  * grd2stream
  * reads two 2-D gridded files which represents the  x-  and  y-
  * components  of a vector field and produces a stream line polygon with
  * starting at point x0,y0 reading from stdin or file
  */
-
-#ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2012-11-22 19:05:34 (tkleiner)>"
-#endif
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -86,6 +86,7 @@ int main( int argc, char** argv )
   float dy0=0.0f,dy1=0.0f,dy2=0.0f,dy3=0.0f;
   float ex=0.0f,ey=0.0f; /* local error */
   float dx=0.0f,dy=0.0f; /* local error */
+  float lim=0.0f;
 
   float dist,dout,delta = 1000.0; /* unit m ???*/
   float dir=1.0;              /* direction (1.. forward, -1..backward) */
@@ -233,19 +234,6 @@ int main( int argc, char** argv )
     }
   }
 
-#if 0
-  while( !feof( fp ) ) {
-    /* skip empty lines */
-    if( fscanf( fp, "%[\n\r]s", line ) != EOF ) {
-      
-      /* read one line */
-      if( fscanf( fp, "%[^\n\r]s", line ) != EOF )
-        printf( "%s\n", line );
-    }
-  }
-  fclose( fp );
-  return 0;
-#endif
 
   while (!feof(fp) && (fgets (line, BUFSIZ, fp) != 0) ) {
 
@@ -303,6 +291,11 @@ int main( int argc, char** argv )
         debug_printf(DEBUG_INFO,
                      "STEP0: xi = %.3f, yi = %.3f, vxi = %.3f, vyi = %.3f\n",xi,yi,vxi,vyi);
 
+        if (verbose>1){
+          fprintf(stderr,
+                  "# x = %.3f, y = %.3f, vx = %.3f, vy = %.3f\n",xi,yi,vxi,vyi);
+        }
+
         if (! (i % freq) ) {
           if(l_opt) {
             printf("%.3f %.3f %.3f %.3f %.3f\n",xi,yi,dist,vxi,vyi);
@@ -319,9 +312,11 @@ int main( int argc, char** argv )
         dx0 = dir * delta * vxi/uv;
         dy0 = dir * delta * vyi/uv;
 
-        /* fprintf(stderr,"# x0=%.3f, y0=%.3f\n",xi,yi); */
-        /* fprintf(stderr,"# dx0=%.3f, dy0=%.3f\n",dx0,dy0); */
-
+        
+        if (verbose>2) {
+          fprintf(stderr,"#\t x0=%15.3f, y0=%15.3f,",xi,yi);
+          fprintf(stderr," dx0=%15.3f, dy0=%15.3f\n",dx0,dy0);
+        }
 
         /*  check stepsize  */
         if ( i > 0 && k_opt == 4) {
@@ -348,9 +343,10 @@ int main( int argc, char** argv )
         dx1 = dir * delta * vxi/uv;
         dy1 = dir * delta * vyi/uv;
 
-        /* fprintf(stderr,"# x1=%.3f, y1=%.3f\n",xt,yt); */
-        /* fprintf(stderr,"# dx1=%.3f, dy1=%.3f\n",dx1,dy1); */
-
+        if (verbose > 2) {
+          fprintf(stderr,"#\t x1=%15.3f, y1=%15.3f,",xt,yt);
+          fprintf(stderr," dx1=%15.3f, dy1=%15.3f\n",dx1,dy1);
+        }
 
         /*
          * RK-STEP 2
@@ -364,8 +360,10 @@ int main( int argc, char** argv )
         dx2 = dir * delta * vxi/uv;
         dy2 = dir * delta * vyi/uv;
 
-        /* fprintf(stderr,"# x2=%.3f, y2=%.3f\n",xt,yt); */
-        /* fprintf(stderr,"# dx2=%.3f, dy2=%.3f\n",dx2,dy2); */
+        if (verbose > 2) {
+          fprintf(stderr,"#\t x2=%15.3f, y2=%15.3f,",xt,yt);
+          fprintf(stderr," dx2=%15.3f, dy2=%15.3f\n",dx2,dy2);
+        }
 
 
         /*
@@ -380,8 +378,10 @@ int main( int argc, char** argv )
         dx3 = dir * delta * vxi/uv;
         dy3 = dir * delta * vyi/uv;
 
-        /* fprintf(stderr,"# x3=%.3f, y3=%.3f\n", xt,yt); */
-        /* fprintf(stderr,"# dx3=%.3f, dy3=%.3f\n",dx3,dy3); */
+        if(verbose>2) {
+          fprintf(stderr,"#\t x3=%15.3f, y3=%15.3f,", xt,yt);
+          fprintf(stderr," dx3=%15.3f, dy3=%15.3f\n",dx3,dy3);
+        }
 
         /*
          * RK-STEP update
@@ -394,11 +394,21 @@ int main( int argc, char** argv )
         xi += dx;
         yi += dy;
 
-        /*  fprintf(stderr,"#->  dx=%15.5f,\tdy=%15.5f\n", dx,dy); */
-        /*  fprintf(stderr,"#->   x=%15.5f,\t y=%15.5f\n", xi,yi); */
+        if(verbose>1) {
+          fprintf(stderr,"# x = %.3f, y = %.3f,", xi,yi);
+          fprintf(stderr," dx = %.3f, dy = %.3f\n", dx,dy);
+        }
+
+        lim=SQRT(dx*dx+dy*dy);
+        if (lim*1000.0f < (MIN(x_inc,y_inc))) {
+          if (verbose>1) {
+            fprintf(stderr,"# error: stepsize to small %.3f < (%.3f,%.3f)\n",lim,x_inc,y_inc);
+          }
+          break;
+        }
+
 
       }
-
       /*
        * end of work
        */
