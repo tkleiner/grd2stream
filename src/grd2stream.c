@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2013-03-19 11:45:56 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2013-08-08 08:58:18 (tkleiner)>"
 #endif
 
 /*
@@ -8,6 +8,13 @@
  * components  of a vector field and produces a stream line polygon with
  * starting at point x0,y0 reading from stdin or file
  */
+
+/*
+ * @todo: fix points outside grids in output
+ * @todo: get a better gues for step size
+ * @todo: 
+ */
+
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -213,6 +220,8 @@ int main( int argc, char** argv )
             ymin,ymax,y_inc,ny);
     fprintf(stderr,"d_out: %.3f d_inc: %.3f RK: %d freq: %u\n",
             dout,delta,k_opt,freq);
+    fprintf(stderr,"verbose: %u\n",verbose);
+
   }
   
 
@@ -258,9 +267,12 @@ int main( int argc, char** argv )
        * the work is starting here
        *
        ******************************************************************/
-      if ( (x0 > p_x[nx-2]) || (y0 > p_y[ny-2]) ||
+      
+      if ( (x0 > p_x[nx-1]) || (y0 > p_y[ny-1]) ||
            (x0 < p_x[0]) || (y0 < p_y[0]) ) {
         fprintf(stderr,"Error: P(%.3f, %.3f) is outside valid region.\n",x0,y0);
+        fprintf(stderr,"       xmin=%.3f xmax=%.3f\n",p_x[0],p_x[nx-1]);
+        fprintf(stderr,"       ymin=%.3f ymax=%.3f\n",p_x[0],p_x[nx-1]);
         fprintf(stderr,"... using next\n");
         continue; /* continue with next point in file */
       }
@@ -306,13 +318,41 @@ int main( int argc, char** argv )
 
         dist += (delta * dir);
 
-        if(isnan(vxi) || isnan(vyi)) break;
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) break;
-
+        if(isnan(vxi) || isnan(vyi)) {
+          if (verbose>1){
+            fprintf(stderr,"Error: isnan vxi || vyi\n");
+          }
+          break;
+        }
+        
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
+          if (verbose>1){
+            fprintf(stderr,"Error: isnan vxi || vyi\n");
+          }
+          break;
+        }
+        
         dx0 = dir * delta * vxi/uv;
         dy0 = dir * delta * vyi/uv;
 
-        
+
+        /*
+         * check initial guess
+         */
+        if ( (x0+dx0 > p_x[nx-1]) || (x0+dx0 < p_x[0]) ) {
+          if (verbose){
+            fprintf(stderr,"Stop: estimate x0+dx0 (%.3f) is outside valid region.\n",x0+dx0);
+          }
+          break;
+        }
+        if ( (y0+dy0 > p_y[ny-1]) || (y0+dy0 < p_y[0]) ) {
+          if (verbose){
+            fprintf(stderr,"Stop: estimate y0+dy0 (%.3f) is outside valid region.\n",y0+dy0);
+          }
+          break;
+        }
+
+
         if (verbose>2) {
           fprintf(stderr,"#\t x0=%15.3f, y0=%15.3f,",xi,yi);
           fprintf(stderr," dx0=%15.3f, dy0=%15.3f\n",dx0,dy0);
@@ -389,7 +429,23 @@ int main( int argc, char** argv )
         dx = ( dx0/6.0f + dx1/3.0f + dx2/3.0f + dx3/6.0f );
         dy = ( dy0/6.0f + dy1/3.0f + dy2/3.0f + dy3/6.0f );
 
-        /*  fprintf(stderr,"#->   x=%15.5f,\t y=%15.5f\n", xi,yi); */
+
+        /*
+         * check final step 
+         */
+        if ( (xi+dx > p_x[nx-1]) || (xi+dx < p_x[0]) ) {
+          if (verbose){
+            fprintf(stderr,"Stop: estimate xi+dx (%.3f) is outside valid region.\n",xi+dx);
+          }
+          break;
+        }
+        if ( (yi+dy > p_y[ny-1]) || (yi+dy < p_y[0]) ) {
+          if (verbose){
+            fprintf(stderr,"Stop: estimate yi+dy (%.3f) is outside valid region.\n",yi+dy);
+          }
+          break;
+        }
+
 
         xi += dx;
         yi += dy;
@@ -439,20 +495,46 @@ int interp2(size_t nx, size_t ny, float* p_x, float* p_y,
             float xi, float yi, float* p_vxi, float* p_vyi){
 
   size_t ixel=0,iyel=0; /* where we are */
+  size_t ixel1=0,iyel1=0; /* the next */
   size_t i00,i01,i10,i11;
   float p1=0.0f,p2=0.0f,q1=0.0f,q2=0.0f;
 
-  locate(p_x, nx, xi, &ixel);
+  debug_printf(DEBUG_INFO,"search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n",
+               xi,0,p_x[0],nx-1,p_x[nx-1]);
+  debug_printf(DEBUG_INFO,"search yi = %.3f in y[%lu] = %.3f < yi < y[%lu] = %.3f\n",
+               yi,0,p_y[0],ny-1,p_y[ny-1]);
+
+  if (xi >= p_x[nx-1]) {
+    /* right margin */
+    ixel = nx-1; 
+  } else if (xi <= p_x[0]) {
+    /* left margin */
+    ixel = 0;
+  } else {
+    locate(p_x, nx, xi, &ixel);
+  }
   debug_printf(DEBUG_INFO,"found xi = %.3f -> x[%lu] = %.3f\n",
                xi,ixel,p_x[ixel]);
-  locate(p_y, ny, yi, &iyel);
+
+  if (yi >= p_y[ny-1]) {
+    /* top maergin */
+    iyel = ny-1;
+  } else if (yi <= p_y[0]) {
+    /* bottom margin */
+    iyel = 0;
+  } else {
+    locate(p_y, ny, yi, &iyel);
+  }
   debug_printf(DEBUG_INFO,"found yi = %.3f -> y[%lu] = %.3f\n",
                yi,iyel,p_y[iyel]);
 
+  ixel1 = MIN(ixel+1,nx-1);
+  iyel1 = MIN(iyel+1,ny-1);
+
   i00 = (iyel)*(nx)+ixel;
-  i01 = (iyel)*(nx)+ixel+1;
-  i10 = (iyel+1)*(nx)+ixel;
-  i11 = (iyel+1)*(nx)+ixel+1;
+  i01 = (iyel)*(nx)+ixel1;
+  i10 = (iyel1)*(nx)+ixel;
+  i11 = (iyel1)*(nx)+ixel1;
 
   debug_printf(DEBUG_INFO,"vx[i00] =  %.3f\n",p_vx[i00]);
   debug_printf(DEBUG_INFO,"vx[i10] =  %.3f\n",p_vx[i10]);
