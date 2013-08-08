@@ -1,0 +1,111 @@
+#!/bin/bash
+##
+## 
+##
+set -efxu 
+
+name=$(basename $0 .gmt)
+eps=${name}.eps
+tmp_dir=_tmp_$name
+test -d $tmp_dir || mkdir $tmp_dir
+
+dreg=-R-3/3/-3/3
+preg=-R-3.2/3.2/-3.2/3.2
+pro=-JX10c/10c
+
+inc=.01
+
+
+##
+## create simple topography: z(x,y) = sin(x*y)*Cos(x)
+## 
+grdmath $dreg -I$inc X Y MUL SIN = $tmp_dir/z1.grd
+grdmath $dreg -I$inc X COS = $tmp_dir/z2.grd
+grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL = $tmp_dir/z.grd
+
+##
+## assume flow goes down the hills
+##
+grdmath $tmp_dir/z.grd DDX -1 MUL = $tmp_dir/vx.grd
+grdmath $tmp_dir/z.grd DDY -1 MUL = $tmp_dir/vy.grd
+grdmath $tmp_dir/vx.grd $tmp_dir/vy.grd R2 SQRT = $tmp_dir/mag.grd
+
+
+
+##
+## autoplace stream lines
+##
+#if [ ! -f $tmp_dir/lines_f.d ] ; then
+
+  grdsample $tmp_dir/mag.grd $dreg -I0.25 -G$tmp_dir/mag_c.grd
+
+  ## create seeds
+  grd2xyz $tmp_dir/mag_c.grd | gmtconvert -F0,1 > $tmp_dir/start.d
+
+  cat $tmp_dir/start.d | \
+    grd2stream $tmp_dir/vx.grd $tmp_dir/vy.grd > $tmp_dir/lines_f.d
+
+  cat $tmp_dir/start.d | \
+    grd2stream -b $tmp_dir/vx.grd $tmp_dir/vy.grd > $tmp_dir/lines_b.d
+
+#fi
+
+##
+## colorscheme
+##
+cpt=$tmp_dir/topo.cpt
+makecpt -CLakeColor.cpt -T-1/1/.2 > $cpt
+
+
+########################################################################
+### The figure
+########################################################################
+gmtset PAPER_MEDIA a4+
+gmtset PAGE_ORIENTATION portrait 
+gmtset ANNOT_FONT_SIZE 10
+gmtset ANNOT_FONT_PRIMARY  Helvetica
+gmtset ANNOT_OFFSET_PRIMARY 0.2c
+gmtset LABEL_FONT Helvetica
+gmtset LABEL_FONT_SIZE 10
+gmtset LABEL_OFFSET 0.4c
+gmtset OBLIQUE_ANNOTATION 34
+gmtset PLOT_DEGREE_FORMAT ddd:mm:ssF
+blue=49/98/159  ## uniMS polar blue
+red=204/0/0     ## uniMS polar red
+green=0/204/0
+
+psbasemap $preg $pro -B0 -K > $eps
+grdimage $tmp_dir/z.grd -R -J  -C$cpt -O -K >> $eps
+
+## Topography contours
+grdcontour $tmp_dir/z.grd -R -J  -C0.2 -A- -T0.1i/0.05i -O -K >> $eps
+
+## streamlines
+test -f $tmp_dir/lines_f.d && \
+  psxy -m $tmp_dir/lines_f.d -R -J -W0.75p,orange -O -K >> $eps
+test -f $tmp_dir/lines_b.d && \
+  psxy -m $tmp_dir/lines_b.d -R -J -W0.75p,orange -O -K >> $eps
+
+## -E center on grid node 
+## -N do not clip
+vec=-Q0.03i/0.1i/0.09in0.25i
+vec=-Q0.025i/0.08i/0.06in0.25i
+#vec=-Q
+grdvector $tmp_dir/vx.grd $tmp_dir/vy.grd -I0.5 -R -J $vec \
+  -G0 -S8i -E -N -O -K  >> $eps
+
+psbasemap -R -J -Ba1f0.2/a1f0.2WSne -O >> $eps
+echo "%%EOF" >> $eps
+
+pdf=$(basename $eps .eps).pdf
+ps2raster -Tf $eps
+xpdf $pdf
+
+rm -f .gmtcommands4 .gmtdefaults4
+rm -rf $tmp_dir
+
+
+
+
+
+
