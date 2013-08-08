@@ -3,7 +3,7 @@
 ## Init
 ##
 ########################################################################
-AC_INIT([grd2stream], [0.2.2], [tkleiner@awi.de])
+AC_INIT([grd2stream], [0.2.3], [tkleiner@awi.de])
 AC_CONFIG_SRCDIR([configure.ac])
 # Put helper scripts here to reduce top level clutter
 AC_CONFIG_AUX_DIR([admin])
