@@ -1,10 +1,10 @@
 ##
-## Time-stamp: <2012-11-05 15:46:00 (tkleiner)>
+## Time-stamp: <2013-08-08 09:32:35 (tkleiner)>
 ##
 ACLOCAL_AMFLAGS  = -I m4
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = m4 src 
+SUBDIRS = m4 src example
 
 
 ##
