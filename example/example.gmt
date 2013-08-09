@@ -16,7 +16,7 @@ pro=-JX10c/10c
 inc=.01
 
 seed=divopt
-seed=regular
+seed=regular_dumy
 
 
 ##
@@ -34,10 +34,49 @@ grdmath $tmp_dir/z.grd DDY -1 MUL = $tmp_dir/v.grd
 grdmath $tmp_dir/u.grd $tmp_dir/v.grd R2 SQRT = $tmp_dir/mag.grd
 
 # ## check divergence
-# grdmath $tmp_dir/u.grd DDX = $tmp_dir/dudx.grd
-# grdmath $tmp_dir/u.grd DDY = $tmp_dir/dudy.grd
-# grdmath $tmp_dir/v.grd DDX = $tmp_dir/dvdx.grd
-# grdmath $tmp_dir/v.grd DDY = $tmp_dir/dvdy.grd
+grdmath $tmp_dir/u.grd DDX = $tmp_dir/dudx.grd
+grdmath $tmp_dir/u.grd DDY = $tmp_dir/dudy.grd
+grdmath $tmp_dir/v.grd DDX = $tmp_dir/dvdx.grd
+grdmath $tmp_dir/v.grd DDY = $tmp_dir/dvdy.grd
+
+
+##                     ( a b )
+## compute eigenvalues ( c d )
+##
+## a = dudx b = dudy, c = dvdx d = dvdy
+#e1 = 1/2 (a + d - Sqrt[a^2 + 4 b c - 2 a d + d^2]) 
+#e2=  1/2 (a + d + Sqrt[a^2 + 4 b c - 2 a d + d^2])
+
+grdmath $tmp_dir/dudx.grd 2 POW = $tmp_dir/a2.grd
+grdmath $tmp_dir/dvdy.grd 2 POW = $tmp_dir/d2.grd
+grdmath $tmp_dir/dudy.grd $tmp_dir/dvdx.grd MUL 4 MUL = $tmp_dir/4bc.grd
+grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd MUL 2 MUL = $tmp_dir/2ad.grd
+
+grdmath $tmp_dir/a2.grd $tmp_dir/4bc.grd ADD $tmp_dir/2ad.grd \
+  SUB $tmp_dir/d2.grd ADD SQRT = $tmp_dir/part1.grd
+
+grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd ADD $tmp_dir/part1.grd \
+  SUB 0.5 MUL = $tmp_dir/e1.grd
+
+grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd ADD $tmp_dir/part1.grd \
+  ADD 0.5 MUL = $tmp_dir/e2.grd
+
+grd2xyz $tmp_dir/e1.grd > $tmp_dir/e1.d
+grd2xyz $tmp_dir/e2.grd > $tmp_dir/e2.d
+paste $tmp_dir/e1.d $tmp_dir/e2.d | gmtconvert -F0,1,2,5 > $tmp_dir/e1e2.d
+
+cat $tmp_dir/e1e2.d | awk '($3<0 && $4>0){print $1,$2,0}' > $tmp_dir/saddle.d
+cat $tmp_dir/e1e2.d | awk '($3<0 && $4<0){print $1,$2,1}' > $tmp_dir/attracting.d
+cat $tmp_dir/e1e2.d | awk '($3>0 && $4>0){print $1,$2,-1}' > $tmp_dir/repelling.d
+
+grdmath $tmp_dir/e1.grd 0 MUL = $tmp_dir/topology.grd
+grdedit $tmp_dir/topology.grd -N$tmp_dir/attracting.d
+grdedit $tmp_dir/topology.grd -N$tmp_dir/repelling.d
+#grdedit $tmp_dir/topology.grd -N$tmp_dir/saddle.d
+
+
+
+
 # ## div(velo)
 # grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd ADD = $tmp_dir/div.grd
 # ## rot(velo)
@@ -134,14 +173,17 @@ elif [ "$seed" == "divopt" ] ; then
   
   #rm $tmp_dir/lines_b.d
 
-
-  
-else 
+elif [ "$seed" == "all" ] ; then
 
   ## all
   grd2xyz $tmp_dir/mag_c.grd | gmtconvert -F0,1 > $tmp_dir/start.d
   cat $tmp_dir/start.d | awk '{print $0,1; print $0,-1}' | \
     grd2stream -L $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines.d
+  
+else 
+
+  echo "skip"
+
 
 fi
 
@@ -183,16 +225,15 @@ grdimage $tmp_dir/z.grd -R -J  -C$cpt -O -K >> $eps
 ## Topography contours
 grdcontour $tmp_dir/z.grd -R -J  -C0.2 -A- -T0.1i/0.05i -O -K >> $eps
 
-## streamlines
-test -f $tmp_dir/lines_b.d && \
-  psxy -m $tmp_dir/lines_b.d -R -J -W1p,$red -O -K >> $eps
+# ## streamlines
+# test -f $tmp_dir/lines_b.d && \
+#   psxy -m $tmp_dir/lines_b.d -R -J -W1p,$red -O -K >> $eps
 
-test -f $tmp_dir/lines_f.d && \
-  psxy -m $tmp_dir/lines_f.d -R -J -W1p,orange -O -K >> $eps
+# test -f $tmp_dir/lines_f.d && \
+#   psxy -m $tmp_dir/lines_f.d -R -J -W1p,orange -O -K >> $eps
 
-
-test -f $tmp_dir/lines.d && \
-  psxy -m $tmp_dir/lines.d -R -J -W1p,$green -O -K >> $eps
+# test -f $tmp_dir/lines.d && \
+#   psxy -m $tmp_dir/lines.d -R -J -W1p,$green -O -K >> $eps
 
 
 ## -E center on grid node 
@@ -205,7 +246,9 @@ grdvector $tmp_dir/u.grd $tmp_dir/v.grd -I0.5 -R -J $vec \
 
 psbasemap -R -J -Ba1f0.2/a1f0.2:."z(x,y) = sin(x*y)*cos(x)":WSne -O -K >> $eps
 
-# ## second image on the right
+##
+## divergency second image on the right
+##
 # psbasemap $preg $pro -B0 -X12 -O -K >> $eps
 # grdmath $tmp_dir/u.grd DDX = $tmp_dir/dudx.grd
 # grdmath $tmp_dir/v.grd DDY = $tmp_dir/dvdy.grd
@@ -214,6 +257,36 @@ psbasemap -R -J -Ba1f0.2/a1f0.2:."z(x,y) = sin(x*y)*cos(x)":WSne -O -K >> $eps
 # grdimage $tmp_dir/div.grd -R -J -C$cpt -O -K >> $eps
 # grdcontour $tmp_dir/div.grd -R -J -C$cpt  -T0.1i/0.05i -O -K >> $eps
 # psbasemap -R -J -Ba1f0.2/a1f0.2:."div(v)":wSne -O -K >> $eps
+
+##
+## Eigenvalues
+##
+# ## next image on the right
+# psbasemap $preg $pro -B0 -X12 -O -K >> $eps
+# makecpt -Cpanoply -T-10/10/2 -D > $cpt
+# grdimage $tmp_dir/e1.grd -R -J -C$cpt -O -K >> $eps
+# grdcontour $tmp_dir/e1.grd -R -J -C$cpt  -T0.1i/0.05i -O -K >> $eps
+# psbasemap -R -J -Ba1f0.2/a1f0.2:."e1":wSne -O -K >> $eps
+
+# ## next image on the right
+# psbasemap $preg $pro -B0 -X12 -O -K >> $eps
+# makecpt -Cpanoply -T-10/10/2 -D > $cpt
+# grdimage $tmp_dir/e2.grd -R -J -C$cpt -O -K >> $eps
+# grdcontour $tmp_dir/e2.grd -R -J -C$cpt  -T0.1i/0.05i -O -K >> $eps
+# psbasemap -R -J -Ba1f0.2/a1f0.2:."e2":wSne -O -K >> $eps
+
+
+## next image on the right
+psbasemap $preg $pro -B0 -X12 -O -K >> $eps
+#makecpt -Cpanoply -T-1/1/.2 -D > $cpt
+# psxy $tmp_dir/saddle.d -R -J -Sc0.05 -G$blue -O -K >> $eps
+# psxy $tmp_dir/attracting.d -R -J -Sc0.05 -G$green -O -K >> $eps
+# psxy $tmp_dir/repelling.d -R -J -Sc0.05 -G$red -O -K >> $eps
+grdimage $tmp_dir/topology.grd -R -J -C$cpt -O -K >> $eps
+grdcontour $tmp_dir/topology.grd -R -J -C1 -O -K >> $eps
+psbasemap -R -J -Ba1f0.2/a1f0.2:."topology":wSne -O -K >> $eps
+
+
 
 psbasemap -R -J -B0 -O >> $eps
 echo "%%EOF" >> $eps

@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2013-08-09 08:56:00 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2013-08-09 09:00:46 (tkleiner)>"
 #endif
 
 /*
@@ -326,9 +326,6 @@ int main( int argc, char** argv )
         }
 
       }
-
-
-
 
       /*****************************************************************
        *
