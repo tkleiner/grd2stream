@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2013-08-09 07:10:16 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2013-08-09 08:56:00 (tkleiner)>"
 #endif
 
 /*
@@ -308,6 +308,12 @@ int main( int argc, char** argv )
                   "ERROR: Mismatch between actual and expected fields near line %u\n",
                   nlines);
           return EXIT_FAILURE;
+        } else {
+          if ( dir<0.0 ) {
+            dir = -1.0;
+          } else {
+            dir = 1.0;
+          }
         }
       
       } else {
