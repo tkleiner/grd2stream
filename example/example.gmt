@@ -153,6 +153,10 @@ fi
 cpt=$tmp_dir/topo.cpt
 makecpt -CLakeColor.cpt -T-1/1/.2 > $cpt
 
+## similar color scheme
+# makecpt -Cocean -T-3/3/.2 > $cpt
+
+
 
 ########################################################################
 ### The figure
