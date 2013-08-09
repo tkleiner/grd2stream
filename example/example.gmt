@@ -15,9 +15,12 @@ pro=-JX10c/10c
 
 inc=.01
 
+seed=divopt
+seed=regular
+
 
 ##
-## create simple topography: z(x,y) = sin(x*y)*Cos(x)
+## create simple topography: z(x,y) = sin(x*y)*cos(x)
 ## 
 grdmath $dreg -I$inc X Y MUL SIN = $tmp_dir/z1.grd
 grdmath $dreg -I$inc X COS = $tmp_dir/z2.grd
@@ -26,29 +29,123 @@ grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL = $tmp_dir/z.grd
 ##
 ## assume flow goes down the hills
 ##
-grdmath $tmp_dir/z.grd DDX -1 MUL = $tmp_dir/vx.grd
-grdmath $tmp_dir/z.grd DDY -1 MUL = $tmp_dir/vy.grd
-grdmath $tmp_dir/vx.grd $tmp_dir/vy.grd R2 SQRT = $tmp_dir/mag.grd
+grdmath $tmp_dir/z.grd DDX -1 MUL = $tmp_dir/u.grd
+grdmath $tmp_dir/z.grd DDY -1 MUL = $tmp_dir/v.grd
+grdmath $tmp_dir/u.grd $tmp_dir/v.grd R2 SQRT = $tmp_dir/mag.grd
+
+# ## check divergence
+# grdmath $tmp_dir/u.grd DDX = $tmp_dir/dudx.grd
+# grdmath $tmp_dir/u.grd DDY = $tmp_dir/dudy.grd
+# grdmath $tmp_dir/v.grd DDX = $tmp_dir/dvdx.grd
+# grdmath $tmp_dir/v.grd DDY = $tmp_dir/dvdy.grd
+# ## div(velo)
+# grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd ADD = $tmp_dir/div.grd
+# ## rot(velo)
+# grdmath $tmp_dir/dudy.grd $tmp_dir/dvdx.grd ADD = $tmp_dir/rot.grd
+
+
+## coarse grid
+grdsample $tmp_dir/mag.grd $dreg -I0.25 -G$tmp_dir/mag_c.grd
+grdsample $tmp_dir/u.grd $dreg -I0.25 -G$tmp_dir/u_c.grd
+grdsample $tmp_dir/v.grd $dreg -I0.25 -G$tmp_dir/v_c.grd
+
+## check divergence
+grdmath $tmp_dir/u_c.grd DDX = $tmp_dir/dudx.grd
+grdmath $tmp_dir/u_c.grd DDY = $tmp_dir/dudy.grd
+grdmath $tmp_dir/v_c.grd DDX = $tmp_dir/dvdx.grd
+grdmath $tmp_dir/v_c.grd DDY = $tmp_dir/dvdy.grd
+## div(velo)
+grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd ADD = $tmp_dir/div.grd
+## rot(velo)
+grdmath $tmp_dir/dudy.grd $tmp_dir/dvdx.grd ADD = $tmp_dir/rot.grd
+
+## use this for forward seeds
+grdclip $tmp_dir/div.grd -Sb0/NAN -G$tmp_dir/div_pos.grd
+## use this for beckward seeds
+grdclip $tmp_dir/div.grd -Sa0/NAN -G$tmp_dir/div_neg.grd
 
 
 
 ##
 ## autoplace stream lines
 ##
-#if [ ! -f $tmp_dir/lines_f.d ] ; then
-
-  grdsample $tmp_dir/mag.grd $dreg -I0.25 -G$tmp_dir/mag_c.grd
-
+if [ "$seed" == "regular"  ] ; then
+  
+  ## 
   ## create seeds
+  ##
   grd2xyz $tmp_dir/mag_c.grd | gmtconvert -F0,1 > $tmp_dir/start.d
-
   cat $tmp_dir/start.d | \
-    grd2stream $tmp_dir/vx.grd $tmp_dir/vy.grd > $tmp_dir/lines_f.d
-
+    grd2stream $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_f.d
   cat $tmp_dir/start.d | \
-    grd2stream -b $tmp_dir/vx.grd $tmp_dir/vy.grd > $tmp_dir/lines_b.d
+    grd2stream -b $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_b.d
 
-#fi
+elif [ "$seed" == "divsort" ] ; then
+
+  ##
+  ## optimize draw lines in source area first
+  ##
+  grd2xyz -S $tmp_dir/div_pos.grd | sort -g -k3 -r | \
+    gmtconvert -F0,1 > $tmp_dir/start.d
+  
+  cat $tmp_dir/start.d | awk '{print $0,1;print$0,-1}'| \
+    grd2stream -D -L $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines.d
+
+
+elif [ "$seed" == "divselect" ] ; then
+
+  ##
+  ## optimize the seeds by divergency
+  ##
+  grd2xyz -S $tmp_dir/div_pos.grd | gmtconvert -F0,1 > $tmp_dir/start_f.d
+  cat $tmp_dir/start_f.d | \
+    grd2stream $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_f.d
+  
+  grd2xyz -S $tmp_dir/div_neg.grd | gmtconvert -F0,1 > $tmp_dir/start_b.d
+  cat $tmp_dir/start_b.d | \
+    grd2stream -b $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_b.d
+
+
+elif [ "$seed" == "divopt" ] ; then
+
+  ##
+  ## optimize the seeds by divergency
+  ##
+  ## start in sink area and trace back
+  grd2xyz -S $tmp_dir/div.grd | gmtconvert -F0,1 > $tmp_dir/start_b.d
+  cat $tmp_dir/start_b.d | \
+    grd2stream -b $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_b.d
+
+  r=$(grdinfo -I- $tmp_dir/div.grd)
+  i=$(grdinfo -I $tmp_dir/div.grd)
+  
+  cat $tmp_dir/lines_b.d | \
+    gmtconvert -m -Eb | grep -v "[>#]" | xyz2grd -Az $r $i -G$tmp_dir/mask.grd
+  ncview $tmp_dir/mask.grd
+  exit
+
+  # ## trace back to origin
+  # cat $tmp_dir/lines_b.d | \
+  #   gmtconvert -m -El | grep -v "[>#]" | gmtconvert -F0,1 > $tmp_dir/start_f.d
+
+  # cat $tmp_dir/start_f.d | \
+  #   grd2stream  $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_f.d
+  
+  
+  #rm $tmp_dir/lines_b.d
+
+
+  
+else 
+
+  ## all
+  grd2xyz $tmp_dir/mag_c.grd | gmtconvert -F0,1 > $tmp_dir/start.d
+  cat $tmp_dir/start.d | awk '{print $0,1; print $0,-1}' | \
+    grd2stream -L $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines.d
+
+fi
+
+
 
 ##
 ## colorscheme
@@ -62,6 +159,8 @@ makecpt -CLakeColor.cpt -T-1/1/.2 > $cpt
 ########################################################################
 gmtset PAPER_MEDIA a4+
 gmtset PAGE_ORIENTATION portrait 
+gmtset HEADER_FONT_SIZE	14p
+gmtset HEADER_OFFSET 0c
 gmtset ANNOT_FONT_SIZE 10
 gmtset ANNOT_FONT_PRIMARY  Helvetica
 gmtset ANNOT_OFFSET_PRIMARY 0.2c
@@ -81,20 +180,38 @@ grdimage $tmp_dir/z.grd -R -J  -C$cpt -O -K >> $eps
 grdcontour $tmp_dir/z.grd -R -J  -C0.2 -A- -T0.1i/0.05i -O -K >> $eps
 
 ## streamlines
-test -f $tmp_dir/lines_f.d && \
-  psxy -m $tmp_dir/lines_f.d -R -J -W0.75p,orange -O -K >> $eps
 test -f $tmp_dir/lines_b.d && \
-  psxy -m $tmp_dir/lines_b.d -R -J -W0.75p,orange -O -K >> $eps
+  psxy -m $tmp_dir/lines_b.d -R -J -W1p,$red -O -K >> $eps
+
+test -f $tmp_dir/lines_f.d && \
+  psxy -m $tmp_dir/lines_f.d -R -J -W1p,orange -O -K >> $eps
+
+
+test -f $tmp_dir/lines.d && \
+  psxy -m $tmp_dir/lines.d -R -J -W1p,$green -O -K >> $eps
+
 
 ## -E center on grid node 
 ## -N do not clip
 vec=-Q0.03i/0.1i/0.09in0.25i
 vec=-Q0.025i/0.08i/0.06in0.25i
 #vec=-Q
-grdvector $tmp_dir/vx.grd $tmp_dir/vy.grd -I0.5 -R -J $vec \
+grdvector $tmp_dir/u.grd $tmp_dir/v.grd -I0.5 -R -J $vec \
   -G0 -S8i -E -N -O -K  >> $eps
 
-psbasemap -R -J -Ba1f0.2/a1f0.2WSne -O >> $eps
+psbasemap -R -J -Ba1f0.2/a1f0.2:."z(x,y) = sin(x*y)*cos(x)":WSne -O -K >> $eps
+
+# ## second image on the right
+# psbasemap $preg $pro -B0 -X12 -O -K >> $eps
+# grdmath $tmp_dir/u.grd DDX = $tmp_dir/dudx.grd
+# grdmath $tmp_dir/v.grd DDY = $tmp_dir/dvdy.grd
+# grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd ADD = $tmp_dir/div.grd
+# makecpt -Cpanoply -T-10/10/2 -D > $cpt
+# grdimage $tmp_dir/div.grd -R -J -C$cpt -O -K >> $eps
+# grdcontour $tmp_dir/div.grd -R -J -C$cpt  -T0.1i/0.05i -O -K >> $eps
+# psbasemap -R -J -Ba1f0.2/a1f0.2:."div(v)":wSne -O -K >> $eps
+
+psbasemap -R -J -B0 -O >> $eps
 echo "%%EOF" >> $eps
 
 pdf=$(basename $eps .eps).pdf
@@ -102,7 +219,7 @@ ps2raster -Tf $eps
 xpdf $pdf
 
 rm -f .gmtcommands4 .gmtdefaults4
-rm -rf $tmp_dir
+#rm -rf $tmp_dir
 
 
 
