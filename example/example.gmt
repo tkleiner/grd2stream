@@ -16,7 +16,7 @@ pro=-JX10c/10c
 inc=.01
 
 seed=divopt
-seed=regular_dumy
+seed=regular-
 
 
 ##
@@ -25,6 +25,12 @@ seed=regular_dumy
 grdmath $dreg -I$inc X Y MUL SIN = $tmp_dir/z1.grd
 grdmath $dreg -I$inc X COS = $tmp_dir/z2.grd
 grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL = $tmp_dir/z.grd
+
+# ## simple surface 2
+# grdmath $dreg -I$inc X SIN = $tmp_dir/z1.grd
+# grdmath $dreg -I$inc Y SIN = $tmp_dir/z2.grd
+# grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL = $tmp_dir/z.grd
+
 
 ##
 ## assume flow goes down the hills
@@ -66,14 +72,34 @@ grd2xyz $tmp_dir/e2.grd > $tmp_dir/e2.d
 paste $tmp_dir/e1.d $tmp_dir/e2.d | gmtconvert -F0,1,2,5 > $tmp_dir/e1e2.d
 
 cat $tmp_dir/e1e2.d | awk '($3<0 && $4>0){print $1,$2,0}' > $tmp_dir/saddle.d
-cat $tmp_dir/e1e2.d | awk '($3<0 && $4<0){print $1,$2,1}' > $tmp_dir/attracting.d
-cat $tmp_dir/e1e2.d | awk '($3>0 && $4>0){print $1,$2,-1}' > $tmp_dir/repelling.d
+cat $tmp_dir/e1e2.d | awk '($3<0 && $4<0){print $1,$2,1}' > $tmp_dir/sink.d
+cat $tmp_dir/e1e2.d | awk '($3>=0 && $4>=0){print $1,$2,-1}' > $tmp_dir/source.d
 
 grdmath $tmp_dir/e1.grd 0 MUL = $tmp_dir/topology.grd
-grdedit $tmp_dir/topology.grd -N$tmp_dir/attracting.d
-grdedit $tmp_dir/topology.grd -N$tmp_dir/repelling.d
+grdedit $tmp_dir/topology.grd -N$tmp_dir/sink.d
+grdedit $tmp_dir/topology.grd -N$tmp_dir/source.d
 #grdedit $tmp_dir/topology.grd -N$tmp_dir/saddle.d
 
+echo "0.75 C" > lev.d
+grdcontour $tmp_dir/topology.grd -m -Dcont_p.d $dreg $pro -Clev.d -O -K > /dev/null
+echo "-0.75 C" > lev.d
+grdcontour $tmp_dir/topology.grd -m -Dcont_n.d $dreg $pro -Clev.d -O -K > /dev/null
+rm lev.d
+
+r=$(grdinfo -I- $tmp_dir/mag_c.grd)
+i=$(grdinfo -I $tmp_dir/mag_c.grd)
+
+cat cont_p.d | grep -v "[>#]" | xyz2grd $r $i -G$tmp_dir/start_f.grd
+grd2xyz -S $tmp_dir/start_f.grd | gmtconvert -F0,1 | \
+  awk '{print $1,$2,1;print $1,$2,-1;}' > $tmp_dir/start.d
+cat $tmp_dir/start.d | \
+  grd2stream -L $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_f.d
+
+cat cont_n.d | grep -v "[>#]" | xyz2grd $r $i -G$tmp_dir/start_b.grd
+grd2xyz -S $tmp_dir/start_b.grd | gmtconvert -F0,1 | \
+  awk '{print $1,$2,1;print $1,$2,-1;}' > $tmp_dir/start.d
+cat $tmp_dir/start.d | \
+  grd2stream -L $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_b.d
 
 
 
@@ -225,15 +251,15 @@ grdimage $tmp_dir/z.grd -R -J  -C$cpt -O -K >> $eps
 ## Topography contours
 grdcontour $tmp_dir/z.grd -R -J  -C0.2 -A- -T0.1i/0.05i -O -K >> $eps
 
-# ## streamlines
-# test -f $tmp_dir/lines_b.d && \
-#   psxy -m $tmp_dir/lines_b.d -R -J -W1p,$red -O -K >> $eps
+## streamlines
+test -f $tmp_dir/lines_b.d && \
+  psxy -m $tmp_dir/lines_b.d -R -J -W1p,$red -O -K >> $eps
 
-# test -f $tmp_dir/lines_f.d && \
-#   psxy -m $tmp_dir/lines_f.d -R -J -W1p,orange -O -K >> $eps
+test -f $tmp_dir/lines_f.d && \
+  psxy -m $tmp_dir/lines_f.d -R -J -W1p,orange -O -K >> $eps
 
-# test -f $tmp_dir/lines.d && \
-#   psxy -m $tmp_dir/lines.d -R -J -W1p,$green -O -K >> $eps
+test -f $tmp_dir/lines.d && \
+  psxy -m $tmp_dir/lines.d -R -J -W1p,$green -O -K >> $eps
 
 
 ## -E center on grid node 
@@ -244,7 +270,28 @@ vec=-Q0.025i/0.08i/0.06in0.25i
 grdvector $tmp_dir/u.grd $tmp_dir/v.grd -I0.5 -R -J $vec \
   -G0 -S8i -E -N -O -K  >> $eps
 
-psbasemap -R -J -Ba1f0.2/a1f0.2:."z(x,y) = sin(x*y)*cos(x)":WSne -O -K >> $eps
+# psxy -m cont_p.d -R -J -W1.5p,cyan  -O -K >> $eps 
+# psxy -m cont_n.d -R -J -W1.5p,magenta  -O -K >> $eps 
+
+#psbasemap -R -J -Ba1f0.2/a1f0.2:."z(x,y) = sin(x*y)*cos(x)":WSne -O -K >> $eps
+psbasemap -R -J -Ba1f0.2/a1f0.2:."":WSne -O -K >> $eps
+
+
+##
+## next figure is magnitude
+##
+psbasemap $preg $pro -B0 -X12 -O -K >> $eps
+makecpt -Cpanoply -T-3/3/.5 -D > $cpt
+grdimage $tmp_dir/mag.grd -R -J -C$cpt -O -K >> $eps
+grdcontour $tmp_dir/mag.grd -R -J -C0.5 -A1  -T0.1i/0.05i -O -K >> $eps
+grdvector $tmp_dir/u.grd $tmp_dir/v.grd -I0.5 -R -J $vec \
+  -G0 -S8i -E -N -O -K  >> $eps
+
+psxy -m cont_p.d -R -J -W1.5p,cyan  -O -K >> $eps 
+psxy -m cont_n.d -R -J -W1.5p,magenta  -O -K >> $eps 
+
+psbasemap -R -J -Ba1f0.2/a1f0.2:."mag(v)":wSne -O -K >> $eps
+
 
 ##
 ## divergency second image on the right
@@ -276,15 +323,22 @@ psbasemap -R -J -Ba1f0.2/a1f0.2:."z(x,y) = sin(x*y)*cos(x)":WSne -O -K >> $eps
 # psbasemap -R -J -Ba1f0.2/a1f0.2:."e2":wSne -O -K >> $eps
 
 
-## next image on the right
+##
+## next image on the right: topology
+##
 psbasemap $preg $pro -B0 -X12 -O -K >> $eps
-#makecpt -Cpanoply -T-1/1/.2 -D > $cpt
+makecpt -Cjet.cpt -T-1/1/.2 -D > $cpt
 # psxy $tmp_dir/saddle.d -R -J -Sc0.05 -G$blue -O -K >> $eps
 # psxy $tmp_dir/attracting.d -R -J -Sc0.05 -G$green -O -K >> $eps
 # psxy $tmp_dir/repelling.d -R -J -Sc0.05 -G$red -O -K >> $eps
 grdimage $tmp_dir/topology.grd -R -J -C$cpt -O -K >> $eps
 grdcontour $tmp_dir/topology.grd -R -J -C1 -O -K >> $eps
 psbasemap -R -J -Ba1f0.2/a1f0.2:."topology":wSne -O -K >> $eps
+
+
+psxy -m cont_p.d -R -J -W1.5p,cyan  -O -K >> $eps 
+psxy -m cont_n.d -R -J -W1.5p,magenta  -O -K >> $eps 
+
 
 
 
