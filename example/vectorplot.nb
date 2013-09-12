@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       157,          7]
-NotebookDataLength[   1925849,      32239]
-NotebookOptionsPosition[   1925143,      32212]
-NotebookOutlinePosition[   1925523,      32229]
-CellTagsIndexPosition[   1925480,      32226]
+NotebookDataLength[   1926722,      32263]
+NotebookOptionsPosition[   1925972,      32235]
+NotebookOutlinePosition[   1926352,      32252]
+CellTagsIndexPosition[   1926309,      32249]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -32208,7 +32208,30 @@ l3YkhhLS662u7UyStzX3SrmSI+8mv0U9Tw7CcedOusY2UYl2Zxt7uVTJkehZ
 F11SRP76dXfduxGOJ8rG28JjF9yRmqE+Dewmb6z+5LuplcmP2yF97t13nYrD
 plr0exfOvetUMdaeLv8Y8G//e+rf/W/nn21M\
 \>"]]
-}, Open  ]]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+   "ncfile", "=", 
+    "\"\</Volumes/Workspace/tkleiner/data/Paper/paper_BIS_RLIS/data/nc/sl30ka_\
+2500m_mean10ka.nc\>\""}], ";", "\[IndentingNewLine]", 
+   RowBox[{"vx", "=", 
+    RowBox[{"Import", "[", 
+     RowBox[{"ncfile", ",", 
+      RowBox[{"{", 
+       RowBox[{"\"\<Datasets\>\"", ",", "\"\<u\>\""}], "}"}]}], "]"}]}], ";", 
+   "\[IndentingNewLine]", 
+   RowBox[{"vy", "=", 
+    RowBox[{"Import", "[", 
+     RowBox[{"ncfile", ",", 
+      RowBox[{"{", 
+       RowBox[{"\"\<Datasets\>\"", ",", "\"\<v\>\""}], "}"}]}], "]"}]}], 
+   ";"}], "\[IndentingNewLine]", "*)"}]], "Input",
+ CellChangeTimes->{{3.585282122368973*^9, 3.585282281430332*^9}, {
+  3.585283305413849*^9, 3.585283313824306*^9}, {3.5852835744125223`*^9, 
+  3.585283595410717*^9}}]
 },
 WindowSize->{1074, 970},
 WindowMargins->{{Automatic, 42}, {172, Automatic}},
@@ -32238,9 +32261,10 @@ Cell[985418, 16637, 454, 9, 46, "Input"],
 Cell[985875, 16648, 363, 10, 28, "Input"],
 Cell[CellGroupData[{
 Cell[986263, 16662, 3669, 111, 199, "Input"],
-Cell[989935, 16775, 935192, 15434, 237, 878263, 14499, "CachedBoxData", \
+Cell[989935, 16775, 935192, 15434, 203, 878263, 14499, "CachedBoxData", \
 "BoxData", "Output"]
-}, Open  ]]
+}, Open  ]],
+Cell[1925142, 32212, 826, 21, 97, "Input"]
 }
 ]
 *)
