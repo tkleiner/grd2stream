@@ -20,4 +20,6 @@ stamp-h1
 
 ## files after make
 src/grd2stream
+example/_tmp*
+*.tar.gz
 *.o
