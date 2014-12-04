@@ -24,7 +24,7 @@ check_err(const int stat, const int line, const char *file) {
 
 int 
 grdwrite (const char *filename, const size_t nx, size_t ny, 
-				  const float *p_x, const float *p_y, const float *p_z)
+				  const double *p_x, const double *p_y, const double *p_z)
 {
   int  stat;                   /* return status */
   int  ncid;                   /* netCDF id */
@@ -53,16 +53,16 @@ grdwrite (const char *filename, const size_t nx, size_t ny,
   
   /* define variables */
   x_dims[0] = x_dim;
-  stat = nc_def_var(ncid, "x", NC_FLOAT, RANK_x, x_dims, &x_id);
+  stat = nc_def_var(ncid, "x", NC_DOUBLE, RANK_x, x_dims, &x_id);
   check_err(stat,__LINE__,__FILE__);
   
   y_dims[0] = y_dim;
-  stat = nc_def_var(ncid, "y", NC_FLOAT, RANK_y, y_dims, &y_id);
+  stat = nc_def_var(ncid, "y", NC_DOUBLE, RANK_y, y_dims, &y_id);
   check_err(stat,__LINE__,__FILE__);
    
   z_dims[0] = y_dim;
   z_dims[1] = x_dim;
-  stat = nc_def_var(ncid, "z", NC_FLOAT, RANK_z, z_dims, &z_id);
+  stat = nc_def_var(ncid, "z", NC_DOUBLE, RANK_z, z_dims, &z_id);
   check_err(stat,__LINE__,__FILE__);
   
   /* assign attributes */
@@ -91,13 +91,13 @@ grdwrite (const char *filename, const size_t nx, size_t ny,
   /* 
    * store the data 
    */
-  stat = nc_put_var_float(ncid, x_id, p_x);
+  stat = nc_put_var_double(ncid, x_id, p_x);
   check_err(stat,__LINE__,__FILE__);
   
-  stat = nc_put_var_float(ncid, y_id, p_y);
+  stat = nc_put_var_double(ncid, y_id, p_y);
   check_err(stat,__LINE__,__FILE__);
   
-  stat = nc_put_var_float(ncid, z_id, p_z);
+  stat = nc_put_var_double(ncid, z_id, p_z);
   check_err(stat,__LINE__,__FILE__);
   
   stat = nc_close(ncid);
@@ -107,7 +107,7 @@ grdwrite (const char *filename, const size_t nx, size_t ny,
 
 int 
 grdread (const char *filename, size_t *p_nx, size_t *p_ny, 
-		       float **pp_x, float **pp_y, float **pp_z)
+		       double **pp_x, double **pp_y, double **pp_z)
 {
 
    int stat= 0;
@@ -137,9 +137,9 @@ grdread (const char *filename, size_t *p_nx, size_t *p_ny,
    debug_printf(DEBUG_INFO,"%s -> nx = %lu\n",__FILE__,*p_nx);
    debug_printf(DEBUG_INFO,"%s -> ny = %lu\n",__FILE__,*p_ny);
 
-   if(*pp_x == NULL) *pp_x = (float*) malloc((*p_nx) * sizeof(float));
-   if(*pp_y == NULL) *pp_y = (float*) malloc((*p_ny) * sizeof(float));
-   if(*pp_z == NULL) *pp_z = (float*) malloc((*p_ny)*(*p_nx) * sizeof(float));
+   if(*pp_x == NULL) *pp_x = (double*) malloc((*p_nx) * sizeof(double));
+   if(*pp_y == NULL) *pp_y = (double*) malloc((*p_ny) * sizeof(double));
+   if(*pp_z == NULL) *pp_z = (double*) malloc((*p_ny)*(*p_nx) * sizeof(double));
 
 #if 0
    count[0] = (size_t)(*p_nx);
@@ -147,11 +147,11 @@ grdread (const char *filename, size_t *p_nx, size_t *p_ny,
    if (*pp_x == NULL || *pp_x == NULL || *pp_x == NULL ){
      exit (EXIT_FAILURE);
    } else {
-     stat = nc_get_vara_float(ncid, xid, &start[0], &count[0], *pp_x);
+     stat = nc_get_vara_double(ncid, xid, &start[0], &count[0], *pp_x);
      check_err(stat,__LINE__,__FILE__);
-     stat = nc_get_vara_float(ncid, yid, &start[1], &count[1], *pp_y);
+     stat = nc_get_vara_double(ncid, yid, &start[1], &count[1], *pp_y);
      check_err(stat,__LINE__,__FILE__);
-     stat = nc_get_vara_float(ncid, zid, start, count, *pp_z);
+     stat = nc_get_vara_double(ncid, zid, start, count, *pp_z);
      check_err(stat,__LINE__,__FILE__);
    }
 
@@ -161,11 +161,11 @@ grdread (const char *filename, size_t *p_nx, size_t *p_ny,
    if (*pp_x == NULL || *pp_x == NULL || *pp_x == NULL ){
      exit (EXIT_FAILURE);
    } else {
-     stat = nc_get_vara_float(ncid, xid, &start[1], &count[1], *pp_x);
+     stat = nc_get_vara_double(ncid, xid, &start[1], &count[1], *pp_x);
      check_err(stat,__LINE__,__FILE__);
-     stat = nc_get_vara_float(ncid, yid, &start[0], &count[0], *pp_y);
+     stat = nc_get_vara_double(ncid, yid, &start[0], &count[0], *pp_y);
      check_err(stat,__LINE__,__FILE__);
-     stat = nc_get_vara_float(ncid, zid, start, count, *pp_z);
+     stat = nc_get_vara_double(ncid, zid, start, count, *pp_z);
      check_err(stat,__LINE__,__FILE__);
    }
 #endif

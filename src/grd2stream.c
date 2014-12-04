@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2013-08-09 09:00:46 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2014-12-04 13:51:26 (tkleiner)>"
 #endif
 
 /*
@@ -52,14 +52,14 @@
 /**
  *
  */
-static int interp2(size_t nx, size_t ny, float *p_x, float *p_y,
-                   float *p_vx, float *p_vy, float xi, float yi,
-                   float *p_vxi,float *p_vyi);
+static int interp2(size_t nx, size_t ny, double *p_x, double *p_y,
+                   double *p_vx, double *p_vy, double xi, double yi,
+                   double *p_vxi,double *p_vyi);
 
 /**
  * returns a value j such that x is between xx[j] and xx[j+1]
  */
-static void locate(float* xx, size_t n, float x, size_t *j);
+static void locate(double* xx, size_t n, double x, size_t *j);
 
 /**
  * print usage information and exit
@@ -79,39 +79,39 @@ const char *program_name = PACKAGE_NAME;
 int main( int argc, char** argv )
 {
   size_t nx=0,ny=0;
-  float xmin,xmax,ymin,ymax,x_inc,y_inc;
+  double xmin,xmax,ymin,ymax,x_inc,y_inc;
 
   unsigned long i,cnt, n=MAXSTEPS;
   unsigned int nlines=0,npoly=0;
 
-  float y0=0.0f,x0=0.0f;   /* start positions */
-  float yi=0.0f,xi=0.0f;
-  float yt=0.0f,xt=0.0f;
-  float vxi=0.0f,vyi=0.0f,uv=0.0f;
+  double y0=0.0f,x0=0.0f;   /* start positions */
+  double yi=0.0f,xi=0.0f;
+  double yt=0.0f,xt=0.0f;
+  double vxi=0.0f,vyi=0.0f,uv=0.0f;
 
-  float dx0=0.0f,dx1=0.0f,dx2=0.0f,dx3=0.0f;
-  float dy0=0.0f,dy1=0.0f,dy2=0.0f,dy3=0.0f;
-  float ex=0.0f,ey=0.0f; /* local error */
-  float dx=0.0f,dy=0.0f; /* local error */
-  float lim=0.0f;
+  double dx0=0.0f,dx1=0.0f,dx2=0.0f,dx3=0.0f;
+  double dy0=0.0f,dy1=0.0f,dy2=0.0f,dy3=0.0f;
+  double ex=0.0f,ey=0.0f; /* local error */
+  double dx=0.0f,dy=0.0f; /* local error */
+  double lim=0.0f;
 
-  float dist,dout,delta = 1000.0; /* unit m ???*/
-  float dir=1.0;              /* direction (1.. forward, -1..backward) */
+  double dist,dout,delta = 1000.0; /* unit m ???*/
+  double dir=1.0;              /* direction (1.. forward, -1..backward) */
   unsigned int freq = 1;
 
-  float *p_x=NULL;
-  float *p_y=NULL;
-  float *p_vx=NULL;
-  float *p_vy=NULL;
+  double *p_x=NULL;
+  double *p_y=NULL;
+  double *p_vx=NULL;
+  double *p_vy=NULL;
 
   /* x and y coordinates of the coarse grid */
-  /* float *p_xc = NULL; */
-  /* float *p_yc = NULL; */
+  /* double *p_xc = NULL; */
+  /* double *p_yc = NULL; */
   int *blank = NULL;
   size_t nbx=0,nby=0;
   size_t ib=0,jb=0;
-  float xb_inc = 0.0, yb_inc = 0.0;
-  float density = .1; /* 10% */
+  double xb_inc = 0.0, yb_inc = 0.0;
+  double density = .1; /* 10% */
 
   char* p_vx_name = NULL;
   char* p_vy_name = NULL;
@@ -157,7 +157,7 @@ int main( int argc, char** argv )
       D_opt=1; break;
     case 'd': 
       /* output step size */
-      d_opt=1; dout= (float) atof(optarg); break;
+      d_opt=1; dout= (double) atof(optarg); break;
     case 'h': 
       /* help */
       usage(); break;
@@ -214,8 +214,8 @@ int main( int argc, char** argv )
   xmax = p_x[nx-1];
   ymin = p_y[0];
   ymax = p_y[ny-1];
-  x_inc= (xmax - xmin)/ ( (float) (nx - 1) );
-  y_inc= (ymax - ymin)/ ( (float) (ny - 1) );
+  x_inc= (xmax - xmin)/ ( (double) (nx - 1) );
+  y_inc= (ymax - ymin)/ ( (double) (ny - 1) );
 
 
   /* 
@@ -235,13 +235,13 @@ int main( int argc, char** argv )
 
   blank = (int *)calloc(nby * nbx, sizeof(int));
   /* box spacing */
-  xb_inc = (p_x[nx-1] - p_x[0]) / ( (float)(nbx-1) );
-  yb_inc = (p_y[ny-1] - p_y[0]) / ( (float)(nby-1) );
+  xb_inc = (p_x[nx-1] - p_x[0]) / ( (double)(nbx-1) );
+  yb_inc = (p_y[ny-1] - p_y[0]) / ( (double)(nby-1) );
 
 
   /* default freq = 2 samples per grid cell */
   freq = 2;
-  delta = MIN( x_inc, y_inc ) / ( (float) freq );
+  delta = MIN( x_inc, y_inc ) / ( (double) freq );
 
   /*
    * TODO: makes no sense at the moment
@@ -250,9 +250,9 @@ int main( int argc, char** argv )
     freq = 1;
   } else {
     freq = 1;
-    dout = MIN( x_inc, y_inc ) / ( (float) 5 );
+    dout = MIN( x_inc, y_inc ) / ( (double) 5 );
   }
-  delta = dout / ( (float) freq );
+  delta = dout / ( (double) freq );
 
   
   if (verbose) {
@@ -592,14 +592,14 @@ int main( int argc, char** argv )
 
 
 /*****************************************************************************/
-int interp2(size_t nx, size_t ny, float* p_x, float* p_y,
-            float* p_vx, float* p_vy,
-            float xi, float yi, float* p_vxi, float* p_vyi){
+int interp2(size_t nx, size_t ny, double* p_x, double* p_y,
+            double* p_vx, double* p_vy,
+            double xi, double yi, double* p_vxi, double* p_vyi){
 
   size_t ixel=0,iyel=0; /* where we are */
   size_t ixel1=0,iyel1=0; /* the next */
   size_t i00,i01,i10,i11;
-  float p1=0.0f,p2=0.0f,q1=0.0f,q2=0.0f;
+  double p1=0.0f,p2=0.0f,q1=0.0f,q2=0.0f;
 
   debug_printf(DEBUG_INFO,"search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n",
                xi,0,p_x[0],nx-1,p_x[nx-1]);
@@ -682,7 +682,7 @@ int interp2(size_t nx, size_t ny, float* p_x, float* p_y,
 /**
  *
  */
-void locate(float* xx, size_t n, float x, size_t *j)
+void locate(double* xx, size_t n, double x, size_t *j)
 {
 #if 0
   /* fast search
