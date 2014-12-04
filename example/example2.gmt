@@ -18,6 +18,7 @@ inc=.01
 seed=divopt
 seed=regular-
 
+seed=all
 
 ##
 ## create simple topography: z(x,y) = sin(x*y)*cos(x)
@@ -86,6 +87,12 @@ echo "-0.75 C" > lev.d
 grdcontour $tmp_dir/topology.grd -m -Dcont_n.d $dreg $pro -Clev.d -O -K > /dev/null
 rm lev.d
 
+## coarse grid
+grdsample $tmp_dir/mag.grd $dreg -I0.25 -G$tmp_dir/mag_c.grd
+grdsample $tmp_dir/u.grd $dreg -I0.25 -G$tmp_dir/u_c.grd
+grdsample $tmp_dir/v.grd $dreg -I0.25 -G$tmp_dir/v_c.grd
+
+
 r=$(grdinfo -I- $tmp_dir/mag_c.grd)
 i=$(grdinfo -I $tmp_dir/mag_c.grd)
 
@@ -109,10 +116,7 @@ cat $tmp_dir/start.d | \
 # grdmath $tmp_dir/dudy.grd $tmp_dir/dvdx.grd ADD = $tmp_dir/rot.grd
 
 
-## coarse grid
-grdsample $tmp_dir/mag.grd $dreg -I0.25 -G$tmp_dir/mag_c.grd
-grdsample $tmp_dir/u.grd $dreg -I0.25 -G$tmp_dir/u_c.grd
-grdsample $tmp_dir/v.grd $dreg -I0.25 -G$tmp_dir/v_c.grd
+
 
 ## check divergence
 grdmath $tmp_dir/u_c.grd DDX = $tmp_dir/dudx.grd
@@ -287,8 +291,8 @@ grdcontour $tmp_dir/mag.grd -R -J -C0.5 -A1  -T0.1i/0.05i -O -K >> $eps
 grdvector $tmp_dir/u.grd $tmp_dir/v.grd -I0.5 -R -J $vec \
   -G0 -S8i -E -N -O -K  >> $eps
 
-psxy -m cont_p.d -R -J -W1.5p,cyan  -O -K >> $eps 
-psxy -m cont_n.d -R -J -W1.5p,magenta  -O -K >> $eps 
+psxy -m cont_p.d -R -J -W1.5p,black,"-"  -O -K >> $eps 
+psxy -m cont_n.d -R -J -W1.5p,white,"-"  -O -K >> $eps 
 
 psbasemap -R -J -Ba1f0.2/a1f0.2:."mag(v)":wSne -O -K >> $eps
 
@@ -336,8 +340,8 @@ grdcontour $tmp_dir/topology.grd -R -J -C1 -O -K >> $eps
 psbasemap -R -J -Ba1f0.2/a1f0.2:."topology":wSne -O -K >> $eps
 
 
-psxy -m cont_p.d -R -J -W1.5p,cyan  -O -K >> $eps 
-psxy -m cont_n.d -R -J -W1.5p,magenta  -O -K >> $eps 
+psxy -m cont_p.d -R -J -W1.5p,black,"-"  -O -K >> $eps 
+psxy -m cont_n.d -R -J -W1.5p,white,"-"  -O -K >> $eps 
 
 
 
