@@ -26,6 +26,30 @@ grdmath $dreg -I$inc X Y MUL SIN = $tmp_dir/z1.grd
 grdmath $dreg -I$inc X COS = $tmp_dir/z2.grd
 grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL = $tmp_dir/z.grd
 
+
+##
+## http://www.wolframalpha.com/input/?i=plot+sin%28x+cos%28y%29%29
+## z(x,y) = sin(x cos(y))
+##
+# grdmath $dreg -I$inc Y COS X MUL SIN = $tmp_dir/z.grd
+
+# ##
+# ## http://www.wolframalpha.com/input/?i=plot+y^2+cos%28x%29%2C+x%3D-6..6%2C+y%3D-6..6
+# ## plot y^2 cos(x)
+# # grdmath $dreg -I$inc X COS = $tmp_dir/z1.grd
+# # grdmath $dreg -I$inc Y Y MUL = $tmp_dir/z2.grd
+# # grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL 9 DIV = $tmp_dir/z.grd
+# rmax=$(gmtmath -Q 3 3 R2 SQRT = )
+# rot=$(gmtmath -Q PI 2 DIV = )
+# grdmath $dreg -I$inc X Y R2 SQRT = $tmp_dir/r.grd
+# ## atan2(y=0,x=0) should be undefined, but is zero in gmt
+# grdmath $dreg -I$inc Y X ATAN2 = $tmp_dir/phi.grd # check mathemtica ok
+# grdmath $tmp_dir/phi.grd $rot ADD 8 MUL COS 1 ADD 2 DIV = $tmp_dir/r2.grd  ## range -1..1
+# grdmath $rmax $tmp_dir/r.grd SUB $tmp_dir/r2.grd SUB $rmax DIV = $tmp_dir/z.grd
+# grdmath 3 $tmp_dir/r.grd SUB $tmp_dir/r2.grd MUL = $tmp_dir/z.grd
+
+
+
 ##
 ## assume flow goes down the hills
 ##
@@ -113,6 +137,7 @@ grdvector $tmp_dir/u.grd $tmp_dir/v.grd -I0.5 -R -J $vec \
   -G0 -S8i -E -N -O -K  >> $eps
 
 psbasemap -R -J -Ba1f0.2/a1f0.2:."z(x,y) = sin(x*y)*cos(x)":WSne -O -K >> $eps
+#psbasemap -R -J -Ba1f0.2/a1f0.2:."":WSne -O -K >> $eps
 
 ## second image on the right
 psbasemap $preg $pro -B0 -X12 -O -K >> $eps

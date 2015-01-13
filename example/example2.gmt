@@ -38,6 +38,16 @@ grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL = $tmp_dir/z.grd
 # grdmath $dreg -I$inc Y SIN = $tmp_dir/z2.grd
 # grdmath $tmp_dir/z1.grd $tmp_dir/z2.grd MUL = $tmp_dir/z.grd
 
+# ## simple surface 3
+# rmax=$(gmtmath -Q 3 3 R2 SQRT = )
+# rot=$(gmtmath -Q PI 2 DIV = )
+# grdmath $dreg -I$inc X Y R2 SQRT = $tmp_dir/r.grd
+# ## atan2(y=0,x=0) should be undefined, but is zero in gmt
+# grdmath $dreg -I$inc Y X ATAN2 = $tmp_dir/phi.grd # check mathemtica ok
+# grdmath $tmp_dir/phi.grd $rot ADD 8 MUL COS 1 ADD 2 DIV = $tmp_dir/r2.grd  ## range -1..1
+# grdmath $rmax $tmp_dir/r.grd SUB $tmp_dir/r2.grd SUB $rmax DIV = $tmp_dir/z.grd
+# grdmath 3 $tmp_dir/r.grd SUB $tmp_dir/r2.grd MUL = $tmp_dir/z.grd
+
 
 ##
 ## assume flow goes down the hills
