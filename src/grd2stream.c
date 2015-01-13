@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2014-12-04 13:54:32 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2014-12-04 16:27:27 (tkleiner)>"
 #endif
 
 /*
@@ -72,6 +72,8 @@ static void usage(void);
 static void version(void);
 
 
+
+
 /* for logging */
 const char *program_name = PACKAGE_NAME;
 
@@ -81,7 +83,7 @@ int main( int argc, char** argv )
   size_t nx=0,ny=0;
   double xmin,xmax,ymin,ymax,x_inc,y_inc;
 
-  unsigned long i,cnt, n=MAXSTEPS;
+  unsigned long i,j,cnt, n=MAXSTEPS;
   unsigned int nlines=0,npoly=0;
 
   double y0=0.0f,x0=0.0f;   /* start positions */
@@ -105,8 +107,8 @@ int main( int argc, char** argv )
   double *p_vy=NULL;
 
   /* x and y coordinates of the coarse grid */
-  /* double *p_xc = NULL; */
-  /* double *p_yc = NULL; */
+  double *p_xc = NULL;
+  double *p_yc = NULL;
   int *blank = NULL;
   size_t nbx=0,nby=0;
   size_t ib=0,jb=0;
@@ -238,6 +240,19 @@ int main( int argc, char** argv )
   xb_inc = (p_x[nx-1] - p_x[0]) / ( (double)(nbx-1) );
   yb_inc = (p_y[ny-1] - p_y[0]) / ( (double)(nby-1) );
 
+  if(p_xc == NULL) p_xc = (double*) calloc(nbx, sizeof(double));
+  if(p_yc == NULL) p_yc = (double*) calloc(nby, sizeof(double));
+
+  for (i = 0; i<nbx; i++) {
+    p_xc[i] = p_x[0] + i * xb_inc;
+  }
+  for (j = 0; j<nby; j++) {
+    p_yc[j] = p_y[0] + j * yb_inc;
+  }
+  for (i = 0; i<nbx*nby; i++) {
+    blank[i] = IO_NAN; 
+  }
+  
 
   /* default freq = 2 samples per grid cell */
   freq = 2;
@@ -256,6 +271,9 @@ int main( int argc, char** argv )
 
   
   if (verbose) {
+
+    fprintf(stderr,"Input:\n");
+   
     fprintf(stderr,"xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n",
             xmin,xmax,x_inc,nx);
     fprintf(stderr,"ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n",
@@ -263,10 +281,16 @@ int main( int argc, char** argv )
     fprintf(stderr,"d_out: %.3f d_inc: %.3f RK: %d freq: %u\n",
             dout,delta,k_opt,freq);
 
-    fprintf(stderr,"nbx: %lu nby: %lu xb_inc: %f yb_inc: %f \n",
-            nbx,nby,xb_inc,yb_inc);
+    /* fprintf(stderr,"nbx: %lu nby: %lu xb_inc: %f yb_inc: %f \n", */
+    /*         nbx,nby,xb_inc,yb_inc); */
 
+    fprintf(stderr,"Coarse grid:\n");
+    fprintf(stderr,"xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n",
+            p_xc[0],p_xc[nbx-1],xb_inc,nbx);
+    fprintf(stderr,"ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n",
+            p_yc[0],p_yc[nby-1],yb_inc,nby);
 
+    
     fprintf(stderr,"verbose: %u\n",verbose);
   }
   
@@ -303,7 +327,7 @@ int main( int argc, char** argv )
 
       if (L_opt) {
 
-        if(3 != sscanf (line, "%f %f %f", &x0,&y0,&dir)){
+        if(3 != sscanf (line, "%lf %lf %lf", &x0,&y0,&dir)){
           fprintf(stderr,
                   "ERROR: Mismatch between actual and expected fields near line %u\n",
                   nlines);
@@ -318,11 +342,15 @@ int main( int argc, char** argv )
       
       } else {
 
-        if(2 != sscanf (line, "%f %f", &x0,&y0)){
+        if(2 != sscanf (line, "%lf %lf", &x0,&y0)){
           fprintf(stderr,
                   "ERROR: Mismatch between actual and expected fields near line %u\n",
                   nlines);
           return EXIT_FAILURE;
+        } else {
+          if (verbose > 1) {
+            fprintf(stderr,"       x0=%.3f y0=%.3f\n",x0,y0);
+          }
         }
 
       }
@@ -520,35 +548,51 @@ int main( int argc, char** argv )
         /*
          * check if already visited
          *
-         * is nit working now for backward streamlines! Why?
+         * is not working now for backward streamlines! Why?
          */
-        if (D_opt) {        
-          /* compute index in blank array */
-          ib = (size_t)( ((xi - p_x[0]) / xb_inc));
-          jb = (size_t)( ((yi - p_y[0]) / yb_inc));
+
+        /* compute index in blank array */
+        ib = (size_t)( ((xi - p_x[0]) / xb_inc));
+        jb = (size_t)( ((yi - p_y[0]) / yb_inc));
+        blank[jb*nbx + ib] = npoly;
+
+
+        /* if (verbose) { */
           
-          if (ib <0 || ib > nbx-1) {
-            fprintf(stdout,"# error: %lu %lu %f\n",ib,nbx,(xi - p_x[0]));
-            break;
-          }
-          if (jb <0 || jb > nby-1) {
-            fprintf(stdout,"# error: %lu %lu %f\n",ib,nby,(yi - p_y[0]));
-            break;
-          }
+        /*   fprintf(stderr," xi=%15.5f yi=%15.5f\n",xi,yi); */
+        /*   fprintf(stderr," ib=%d jb=%d\n",ib,jb); */
+        /*   fprintf(stderr," xb=%15.5f yb=%15.5f\n",p_xc[ib],p_yc[jb]); */
+
+        /* } */
+
+        
+        
+        /* if (D_opt) {         */
           
-          if ( (blank[jb*nbx + ib] > 0) && (blank[jb*nbx + ib] != npoly)) {
+        /*   if (ib <0 || ib > nbx-1) { */
+        /*     fprintf(stdout,"# error: %lu %lu %f\n",ib,nbx,(xi - p_x[0])); */
+        /*     break; */
+        /*   } */
+        /*   if (jb <0 || jb > nby-1) { */
+        /*     fprintf(stdout,"# error: %lu %lu %f\n",ib,nby,(yi - p_y[0])); */
+        /*     break; */
+        /*   } */
+          
+        /*   if ( (blank[jb*nbx + ib] > 0) && (blank[jb*nbx + ib] != npoly)) { */
             
-            if (verbose) {
-              fprintf(stdout,"# blank: %lu %lu %d\n",ib,jb, blank[jb*nbx + ib]);
-              fprintf(stdout,"# Stop: x = %.3f, y = %.3f allready visited by %d\n", xi,yi,(int)blank[jb*nbx + ib]);
+        /*     if (verbose) { */
+        /*       fprintf(stdout,"# blank: %lu %lu %d\n", */
+        /*               ib,jb, blank[jb*nbx + ib]); */
+        /*       fprintf(stdout,"# Stop: x = %.3f, y = %.3f allready visited by %d\n", */
+        /*               xi,yi,(int)blank[jb*nbx + ib]); */
               
-            }
-            break;
+        /*     } */
+        /*     break; */
             
-          } else {
-            blank[jb*nbx + ib] = npoly;
-          }
-        }
+        /*   } else { */
+        /*     blank[jb*nbx + ib] = npoly; */
+        /*   } */
+        /* } */
 
 
         if(verbose>1) {
@@ -574,10 +618,17 @@ int main( int argc, char** argv )
 
   }
 
-  if (fp != stdin) fclose(fp);
+  /* write blank array for later usage */
+  
+  grdwrite ("blank.nc", nbx, nby, p_xc, p_yc, (void *)blank, NC_INT);
 
+  
+
+  if (fp != stdin) fclose(fp);
   if(p_x) free(p_x);
   if(p_y) free(p_y);
+  if(p_xc) free(p_xc);
+  if(p_yc) free(p_yc);
   if(p_vx) free(p_vx);
   if(p_vy) free(p_vy);
   if(blank) free(blank);
@@ -619,7 +670,7 @@ int interp2(size_t nx, size_t ny, double* p_x, double* p_y,
                xi,ixel,p_x[ixel]);
 
   if (yi >= p_y[ny-1]) {
-    /* top maergin */
+    /* top margin */
     iyel = ny-1;
   } else if (yi <= p_y[0]) {
     /* bottom margin */
@@ -667,14 +718,7 @@ int interp2(size_t nx, size_t ny, double* p_x, double* p_y,
 
   debug_printf(DEBUG_INFO,"p1 =  %.3f -> q1 = %.3f\n",p1,q1);
   debug_printf(DEBUG_INFO,"p2 =  %.3f -> q2 = %.3f\n",p2,q2);
-
-
-  /* fprintf(stderr,"# (xi=%.3f, yi=%.3f) => (ui=%.3f, vi=%.3f) \n", */
-  /*     xi,yi,(*p_vxi),(*p_vyi) ); */
-
-
-
-
+  
   return EXIT_SUCCESS;
 } /* interp2 */
 

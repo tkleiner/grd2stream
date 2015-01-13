@@ -24,7 +24,7 @@ check_err(const int stat, const int line, const char *file) {
 
 int 
 grdwrite (const char *filename, const size_t nx, size_t ny, 
-				  const double *p_x, const double *p_y, const double *p_z)
+				  const double *p_x, const double *p_y, const void *const p_z, const nc_type vtype)
 {
   int  stat;                   /* return status */
   int  ncid;                   /* netCDF id */
@@ -38,6 +38,9 @@ grdwrite (const char *filename, const size_t nx, size_t ny,
   int x_dims[RANK_x];
   int y_dims[RANK_y];
   int z_dims[RANK_z];
+
+	double dfill = (double)IO_NAN;
+	int ifill = IO_NAN;
   
   /* 
    * enter define mode 
@@ -62,7 +65,22 @@ grdwrite (const char *filename, const size_t nx, size_t ny,
    
   z_dims[0] = y_dim;
   z_dims[1] = x_dim;
-  stat = nc_def_var(ncid, "z", NC_DOUBLE, RANK_z, z_dims, &z_id);
+
+	switch (vtype) {
+	case NC_DOUBLE:
+    stat = nc_def_var(ncid, "z", NC_DOUBLE, RANK_z, z_dims, &z_id);
+		stat = nc_put_att_double(ncid, z_id, "missing_value", NC_DOUBLE, 1,	&dfill);
+		break;
+	case NC_INT:
+    stat = nc_def_var(ncid, "z", NC_INT, RANK_z, z_dims, &z_id);
+		stat = nc_put_att_int(ncid, z_id, "missing_value", NC_INT, 1,	&ifill);
+		break;
+	default:
+		/*type_error(); */
+		break;
+	}			/* end switch */
+
+
   check_err(stat,__LINE__,__FILE__);
   
   /* assign attributes */
@@ -77,8 +95,6 @@ grdwrite (const char *filename, const size_t nx, size_t ny,
   check_err(stat,__LINE__,__FILE__);
   
   stat = nc_put_att_text(ncid, z_id, "long_name", 1, "z");
-  check_err(stat,__LINE__,__FILE__);
-  stat = nc_put_att_text (ncid, z_id, "cartesian_axis", 1, "z");
   check_err(stat,__LINE__,__FILE__);
   
   stat = nc_put_att_text(ncid, NC_GLOBAL, "Conventions", 6, "COARDS");
@@ -96,8 +112,24 @@ grdwrite (const char *filename, const size_t nx, size_t ny,
   
   stat = nc_put_var_double(ncid, y_id, p_y);
   check_err(stat,__LINE__,__FILE__);
+
+
+	switch (vtype) {
+	case NC_DOUBLE:
+		stat = nc_put_var_double(ncid, z_id, (const double *)p_z);
+		break;
+	case NC_INT:
+		stat = nc_put_var_int(ncid, z_id, (const int *)p_z);
+		break;
+	default:
+		/*type_error(); */
+		break;
+	}			/* end switch */
+
   
-  stat = nc_put_var_double(ncid, z_id, p_z);
+  /* 
+     stat = nc_put_var_double(ncid, z_id, p_z);
+  */
   check_err(stat,__LINE__,__FILE__);
   
   stat = nc_close(ncid);
