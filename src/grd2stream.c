@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2015-04-02 12:09:52 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2015-04-02 13:18:08 (tkleiner)>"
 #endif
 
 /*
@@ -73,24 +73,61 @@ static void version(void);
 
 /* make global to use in print functions below */
 int verbose = 0;
+int log_breaks = 0;
 
-
-void log_break_nan(double xi, double yi, double x0, double y0)
+void log_break_nan(double x, double y, double x0, double y0)
 {
-  if (verbose) {
+  if (log_breaks) {
     fprintf(stderr,
             "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
-            "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
+            "for seed (%.3f, %.3f).\n",x,y,x0,y0);
   }
 }
 
 
-void log_break_zero(double xi, double yi, double x0, double y0)
+void log_break_zero(double x, double y, double x0, double y0)
 {
-  if (verbose) {
+  if (log_breaks) {
     fprintf(stderr,
             "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
-            "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
+            "for seed (%.3f, %.3f).\n",x,y,x0,y0);
+  }
+}
+
+
+void log_break_dx(double x, double x0, double y0)
+{
+  if (log_breaks){
+    fprintf(stderr,
+            "Stop: estimated x + dx (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+            x,x0,y0);
+  }
+}
+
+void log_break_dy(double y, double x0, double y0)
+{
+  if (log_breaks){
+    fprintf(stderr,
+            "Stop: estimated y + dy (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+            y,x0,y0);
+  }
+}
+
+void log_break_stepsize(double stpsz, double xinc, double yinc, double x0, double y0)
+{
+  if (log_breaks){
+    fprintf(stderr,
+            "Stop: stepsize to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n",
+            stpsz,xinc,yinc,x0,y0);
+  }
+}
+
+void log_break_maxiter(double x0, double y0)
+{
+  if (log_breaks){
+    fprintf(stderr,
+            "Stop: Maximum number of iterations reached for seed (%.3f, %.3f)\n",
+            x0,y0);
   }
 }
 
@@ -99,25 +136,26 @@ void log_break_zero(double xi, double yi, double x0, double y0)
 /* for logging */
 const char *program_name = PACKAGE_NAME;
 
+
 /*****************************************************************************/
 int main( int argc, char** argv )
 {
   size_t nx=0,ny=0;
   double xmin,xmax,ymin,ymax,x_inc,y_inc;
 
-  unsigned long i,j,cnt, n=MAXSTEPS;
+  unsigned long i, j, cnt, iter, maxiter = MAXSTEPS;
   unsigned int nlines=0,npoly=0;
 
-  double y0=0.0f,x0=0.0f;   /* start positions */
-  double yi=0.0f,xi=0.0f;
-  double yt=0.0f,xt=0.0f;
-  double vxi=0.0f,vyi=0.0f,uv=0.0f;
+  double y0=0.0,x0=0.0;   /* start positions */
+  double yi=0.0,xi=0.0;
+  double yt=0.0,xt=0.0;
+  double vxi=0.0,vyi=0.0,uv=0.0;
 
-  double dx0=0.0f,dx1=0.0f,dx2=0.0f,dx3=0.0f;
-  double dy0=0.0f,dy1=0.0f,dy2=0.0f,dy3=0.0f;
-  double ex=0.0f,ey=0.0f; /* local error */
-  double dx=0.0f,dy=0.0f; /* local error */
-  double lim=0.0f;
+  double dx0=0.0,dx1=0.0,dx2=0.0,dx3=0.0;
+  double dy0=0.0,dy1=0.0,dy2=0.0,dy3=0.0;
+  double ex=0.0,ey=0.0; /* local error */
+  double dx=0.0,dy=0.0; /* local error */
+  double lim=0.0;
 
   double dist,dout,delta = 1000.0; /* unit m ???*/
   double dir=1.0;              /* direction (1.. forward, -1..backward) */
@@ -164,7 +202,7 @@ int main( int argc, char** argv )
 #endif
 
   /* parse commandline args */
-  while ((oc = getopt (argc, argv, "bd:lhvk:n:f:VLD")) != -1)
+  while ((oc = getopt (argc, argv, "bd:lhvk:n:f:VLDr")) != -1)
     switch (oc) {
     case 'b': 
       /* go backward */
@@ -192,13 +230,16 @@ int main( int argc, char** argv )
       k_opt = atoi(optarg); break;
     case 'n': 
       /* maximum number of steps allowed */
-      n = (unsigned int)atoi(optarg); break; 
+      maxiter = (unsigned int)atoi(optarg); break; 
     case 'f': 
       /* read initial points from file */
       p_file_name = (optarg); break; 
     case 'V': 
       /* verbose opttion */
       verbose++; break;
+    case 'r': 
+      /* verbose opttion */
+      log_breaks=1; break;
     case '?':
       fprintf (stderr, "Unknown option `-%c'.\n", optopt);
       return 1;
@@ -286,25 +327,23 @@ int main( int argc, char** argv )
   delta = dout / ( (double) freq );
 
   
-  if (verbose>1) {
-
+  if (verbose) {
     fprintf(stderr,"Input:\n");
-   
     fprintf(stderr,"xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n",
             xmin,xmax,x_inc,nx);
     fprintf(stderr,"ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n",
             ymin,ymax,y_inc,ny);
     fprintf(stderr,"d_out: %.3f d_inc: %.3f RK: %d freq: %u\n",
             dout,delta,k_opt,freq);
-
+    fprintf(stderr,"verbose: %u\n",verbose);
+  }
+  
+  if (verbose>1) {
     fprintf(stderr,"Coarse grid:\n");
     fprintf(stderr,"xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n",
             p_xc[0],p_xc[nbx-1],xb_inc,nbx);
     fprintf(stderr,"ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n",
             p_yc[0],p_yc[nby-1],yb_inc,nby);
-
-    
-    fprintf(stderr,"verbose: %u\n",verbose);
   }
   
 
@@ -316,13 +355,13 @@ int main( int argc, char** argv )
 
   if (p_file_name == NULL) {   /* Just read standard input */
     fp = stdin;
-    if (verbose>1) fprintf (stderr, "Reading from standard input\n");
+    if (verbose) fprintf (stderr, "Reading from standard input\n");
   } else {
     if ( (fp = fopen (p_file_name, "r")) == NULL) {
       fprintf (stderr, "Cannot open file %s\n",p_file_name);
       return EXIT_FAILURE;
     } else {
-      if(verbose>1) fprintf (stderr, "Working on file %s\n", p_file_name);
+      if(verbose) fprintf (stderr, "Working on file %s\n", p_file_name);
     }
   }
 
@@ -376,7 +415,7 @@ int main( int argc, char** argv )
       
       if ( (x0 > p_x[nx-1]) || (y0 > p_y[ny-1]) ||
            (x0 < p_x[0]) || (y0 < p_y[0]) ) {
-        if (verbose) {
+        if (log_breaks) {
           fprintf(stderr,
                   "Stop: Seed (%.3f, %.3f) is outside valid region "
                   "(xmin=%.3f, xmax=%.3f, ymin=%.3f, ymax=%.3f)!\n",
@@ -392,31 +431,29 @@ int main( int argc, char** argv )
       /* simple step iteration */
       xi = x0;
       yi = y0;
-      i = 0;
+      iter = 0;
       
       /*
        * Points at current streamline
        */
-      for ( i = 0; i <= n; i++ ) {
+      for ( iter = 0; iter < maxiter; iter++ ) {
         
-        if ( i == 0 ) {
-          dx0 =  dx1 = dx2 = dx3 = 0.0f;
-          dy0 =  dy1 = dy2 = dy3 = 0.0f;
+        if ( iter == 0 ) {
+          dx0 =  dx1 = dx2 = dx3 = 0.0;
+          dy0 =  dy1 = dy2 = dy3 = 0.0;
         }
 
         /*
          * STEP 0 (get inital velocity data at requested point)
          */
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xi,yi,&vxi,&vyi);
-        debug_printf(DEBUG_INFO,
-                     "STEP0: xi = %.3f, yi = %.3f, vxi = %.3f, vyi = %.3f\n",xi,yi,vxi,vyi);
-
         if (verbose>1){
           fprintf(stderr,
                   "# x = %.3f, y = %.3f, vx = %.3f, vy = %.3f\n",xi,yi,vxi,vyi);
         }
 
-        if (! (i % freq) ) {
+        /* this is the output */
+        if (! (iter % freq) ) {
           if(l_opt) {
             printf("%.3f %.3f %.3f %.3f %.3f\n",xi,yi,dist,vxi,vyi);
           } else {
@@ -424,26 +461,17 @@ int main( int argc, char** argv )
           }
         }
 
+        /* advance now */
         dist += (delta * dir);
 
         if(isnan(vxi) || isnan(vyi)) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
-          }
+          log_break_nan(xi,yi,x0,y0);
           break;
         }
-        
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
-          }
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
+          log_break_zero(xi,yi,x0,y0);
           break;
         }
-        
         dx0 = dir * delta * vxi/uv;
         dy0 = dir * delta * vyi/uv;
 
@@ -452,19 +480,11 @@ int main( int argc, char** argv )
          * check initial guess
          */
         if ( (x0+dx0 > p_x[nx-1]) || (x0+dx0 < p_x[0]) ) {
-          if (verbose){
-            fprintf(stderr,
-                    "Stop: estimated x0+dx0 (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
-                    x0+dx0,x0,y0);
-          }
+          log_break_dx(x0+dx0, x0, y0);
           break;
         }
         if ( (y0+dy0 > p_y[ny-1]) || (y0+dy0 < p_y[0]) ) {
-          if (verbose){
-            fprintf(stderr,
-                    "Stop: estimated y0+dy0 (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
-                    y0+dy0,x0,y0);
-          }
+          log_break_dy(y0+dy0, x0, y0);
           break;
         }
 
@@ -475,7 +495,7 @@ int main( int argc, char** argv )
         }
 
         /*  check stepsize  */
-        if ( i > 0 && k_opt == 4) {
+        if ( iter > 0 && k_opt == 4) {
           ex = dx3/6.0f - vxi*delta/6.0f;
           ey = dy3/6.0f - vyi*delta/6.0f;
         }
@@ -494,19 +514,11 @@ int main( int argc, char** argv )
         yt = yi + dir*dy0/2.0f;
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xt,yt,&vxi,&vyi);
         if(isnan(vxi) || isnan(vyi)) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
-          }
+          log_break_nan(xt,yt,x0,y0);
           break;
         }
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
-          }
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
+          log_break_zero(xt,yt,x0,y0);
           break;
         }
         dx1 = dir * delta * vxi/uv;
@@ -525,19 +537,11 @@ int main( int argc, char** argv )
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xt,yt,&vxi,&vyi);
 
         if(isnan(vxi) || isnan(vyi)) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
-          }
+          log_break_nan(xt,yt,x0,y0);
           break;
         }
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
-          }
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
+          log_break_zero(xt,yt,x0,y0);
           break;
         }
         dx2 = dir * delta * vxi/uv;
@@ -557,19 +561,11 @@ int main( int argc, char** argv )
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xt,yt,&vxi,&vyi);
 
         if(isnan(vxi) || isnan(vyi)) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
-          }
+          log_break_nan(xt,yt,x0,y0);
           break;
         }
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
-          if (verbose) {
-            fprintf(stderr,
-                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
-                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
-          }
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
+          log_break_zero(xt,yt,x0,y0);
           break;
         }
         dx3 = dir * delta * vxi/uv;
@@ -591,19 +587,11 @@ int main( int argc, char** argv )
          * check final step 
          */
         if ( (xi+dx > p_x[nx-1]) || (xi+dx < p_x[0]) ) {
-          if (verbose){
-            fprintf(stderr,
-                    "Stop: estimated xi+dx (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
-                    xi+dx,x0,y0);
-          }
+          log_break_dx(xi+dx, x0, y0);
           break;
         }
         if ( (yi+dy > p_y[ny-1]) || (yi+dy < p_y[0]) ) {
-          if (verbose){
-            fprintf(stderr,
-                    "Stop: estimated yi+dy (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
-                    yi+dy,x0,y0);
-          }
+          log_break_dy(yi+dy, x0, y0);
           break;
         }
 
@@ -669,27 +657,24 @@ int main( int argc, char** argv )
         }
 
         lim=SQRT(dx*dx+dy*dy);
-        if (lim*1000.0f < (MIN(x_inc,y_inc))) {
-          if (verbose>1) {
-            fprintf(stderr,"# error: stepsize to small %.3f < (%.3f,%.3f)\n",lim,x_inc,y_inc);
-          }
+        if (lim*1000.0 < (MIN(x_inc,y_inc))) {
+          log_break_stepsize(lim, x_inc, y_inc, x0, y0);
           break;
         }
 
-
       }
-      /*
-       * end of work
-       */
+      /* end of work for one stream line */
+      if (iter == maxiter) {
+        log_break_maxiter(x0, y0);
+      }
+      
     }
-
-
   }
 
   /* write blank array for later usage */
-  
+#ifdef LATER_USAGE
   grdwrite ("blank.nc", nbx, nby, p_xc, p_yc, (void *)blank, NC_INT);
-
+#endif
   
 
   if (fp != stdin) fclose(fp);
@@ -718,7 +703,7 @@ int interp2(size_t nx, size_t ny, double* p_x, double* p_y,
   size_t ixel=0,iyel=0; /* where we are */
   size_t ixel1=0,iyel1=0; /* the next */
   size_t i00,i01,i10,i11;
-  double p1=0.0f,p2=0.0f,q1=0.0f,q2=0.0f;
+  double p1=0.0,p2=0.0,q1=0.0,q2=0.0;
 
   debug_printf(DEBUG_INFO,"search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n",
                xi,0,p_x[0],nx-1,p_x[nx-1]);
@@ -843,6 +828,7 @@ void usage(void)
           "  -l                  long output format: 'x y dist v_x v_y' (5 cols)\n"
           "  -n maxsteps         maximum number of steps (default: %d)\n"
           "  -V                  verbose output\n"
+          "  -r                  report why a streamline stoped to stderr (default: off)\n"
           "  -v                  version\n"
           "  -h                  help\n\n",MAXSTEPS);
   fprintf(stderr,"\nDESCRIPTION:\n"
