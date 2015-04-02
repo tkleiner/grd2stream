@@ -14,6 +14,7 @@ preg=-R-3.2/3.2/-3.2/3.2
 pro=-JX10c/10c
 
 inc=.01
+dens=50
 
 seed=divopt
 seed=regular
@@ -57,11 +58,6 @@ grdmath $tmp_dir/z.grd DDX -1 MUL = $tmp_dir/u.grd
 grdmath $tmp_dir/z.grd DDY -1 MUL = $tmp_dir/v.grd
 grdmath $tmp_dir/u.grd $tmp_dir/v.grd R2 SQRT = $tmp_dir/mag.grd
 
-## coarse grid
-grdsample $tmp_dir/mag.grd $dreg -I0.25 -G$tmp_dir/mag_c.grd
-grdsample $tmp_dir/u.grd $dreg -I0.25 -G$tmp_dir/u_c.grd
-grdsample $tmp_dir/v.grd $dreg -I0.25 -G$tmp_dir/v_c.grd
-
 ## check divergence
 grdmath $tmp_dir/u.grd DDX = $tmp_dir/dudx.grd
 grdmath $tmp_dir/u.grd DDY = $tmp_dir/dudy.grd
@@ -70,16 +66,18 @@ grdmath $tmp_dir/v.grd DDY = $tmp_dir/dvdy.grd
 ## div(velo)
 grdmath $tmp_dir/dudx.grd $tmp_dir/dvdy.grd ADD = $tmp_dir/div.grd
 
-
 ## 
-## create seeds
+## create regular seeds on coarse grid
 ##
+cinc=$(echo "$inc * $dens" | bc)
+grdsample $tmp_dir/mag.grd $dreg -I$cinc -G$tmp_dir/mag_c.grd
+grdsample $tmp_dir/u.grd $dreg -I$cinc -G$tmp_dir/u_c.grd
+grdsample $tmp_dir/v.grd $dreg -I$cinc -G$tmp_dir/v_c.grd
 grd2xyz $tmp_dir/mag_c.grd | gmtconvert -F0,1 > $tmp_dir/start.d
 cat $tmp_dir/start.d | \
   grd2stream $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_f.d
 cat $tmp_dir/start.d | \
   grd2stream -b $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_b.d
-
 
 ##
 ## colorscheme

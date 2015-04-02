@@ -9,7 +9,7 @@ from scipy.interpolate import Rbf
 
 # Generate data
 np.random.seed(1981)
-width, height = 200, 300
+width, height = 300, 300
 x, y, z = np.random.random((3,10))
 x *= width
 y *= height

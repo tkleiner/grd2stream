@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2014-12-04 16:27:27 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2015-02-20 15:35:10 (tkleiner)>"
 #endif
 
 /*
@@ -227,13 +227,8 @@ int main( int argc, char** argv )
    * boxes. The lower resolution of this grid determines the
    * approximate spacing between trajectories.
    */  
-  /* nbx = (int)(30*density); */
-  /* nby = (int)(30*density); */
   nbx = (int)(nx*density+1);
   nby = (int)(ny*density+1);
-
-  /* nbx = nx; */
-  /* nby = ny; */
 
   blank = (int *)calloc(nby * nbx, sizeof(int));
   /* box spacing */
@@ -280,9 +275,6 @@ int main( int argc, char** argv )
             ymin,ymax,y_inc,ny);
     fprintf(stderr,"d_out: %.3f d_inc: %.3f RK: %d freq: %u\n",
             dout,delta,k_opt,freq);
-
-    /* fprintf(stderr,"nbx: %lu nby: %lu xb_inc: %f yb_inc: %f \n", */
-    /*         nbx,nby,xb_inc,yb_inc); */
 
     fprintf(stderr,"Coarse grid:\n");
     fprintf(stderr,"xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n",
