@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2015-04-02 13:18:08 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2015-04-02 13:19:46 (tkleiner)>"
 #endif
 
 /*
@@ -828,7 +828,7 @@ void usage(void)
           "  -l                  long output format: 'x y dist v_x v_y' (5 cols)\n"
           "  -n maxsteps         maximum number of steps (default: %d)\n"
           "  -V                  verbose output\n"
-          "  -r                  report why a streamline stoped to stderr (default: off)\n"
+          "  -r                  report why a streamline stopped to stderr (default: off)\n"
           "  -v                  version\n"
           "  -h                  help\n\n",MAXSTEPS);
   fprintf(stderr,"\nDESCRIPTION:\n"
