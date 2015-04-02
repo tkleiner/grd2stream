@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2015-02-20 15:35:10 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2015-04-02 12:09:52 (tkleiner)>"
 #endif
 
 /*
@@ -71,6 +71,28 @@ static void usage(void);
  */
 static void version(void);
 
+/* make global to use in print functions below */
+int verbose = 0;
+
+
+void log_break_nan(double xi, double yi, double x0, double y0)
+{
+  if (verbose) {
+    fprintf(stderr,
+            "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
+            "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
+  }
+}
+
+
+void log_break_zero(double xi, double yi, double x0, double y0)
+{
+  if (verbose) {
+    fprintf(stderr,
+            "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
+            "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
+  }
+}
 
 
 
@@ -123,7 +145,6 @@ int main( int argc, char** argv )
   char line[BUFSIZ];
 
   int oc,err=0;
-  int verbose = 0;
   int b_opt = 0; /* backward steps */
   int d_opt = 0; /* delta */
   int k_opt = 4; /* Runge Kutta 4 */
@@ -265,7 +286,7 @@ int main( int argc, char** argv )
   delta = dout / ( (double) freq );
 
   
-  if (verbose) {
+  if (verbose>1) {
 
     fprintf(stderr,"Input:\n");
    
@@ -295,13 +316,13 @@ int main( int argc, char** argv )
 
   if (p_file_name == NULL) {   /* Just read standard input */
     fp = stdin;
-    if (verbose) fprintf (stderr, "Reading from standard input\n");
+    if (verbose>1) fprintf (stderr, "Reading from standard input\n");
   } else {
     if ( (fp = fopen (p_file_name, "r")) == NULL) {
       fprintf (stderr, "Cannot open file %s\n",p_file_name);
       return EXIT_FAILURE;
     } else {
-      if(verbose) fprintf (stderr, "Working on file %s\n", p_file_name);
+      if(verbose>1) fprintf (stderr, "Working on file %s\n", p_file_name);
     }
   }
 
@@ -355,10 +376,12 @@ int main( int argc, char** argv )
       
       if ( (x0 > p_x[nx-1]) || (y0 > p_y[ny-1]) ||
            (x0 < p_x[0]) || (y0 < p_y[0]) ) {
-        fprintf(stderr,"Error: P(%.3f, %.3f) is outside valid region.\n",x0,y0);
-        fprintf(stderr,"       xmin=%.3f xmax=%.3f\n",p_x[0],p_x[nx-1]);
-        fprintf(stderr,"       ymin=%.3f ymax=%.3f\n",p_x[0],p_x[nx-1]);
-        fprintf(stderr,"... using next\n");
+        if (verbose) {
+          fprintf(stderr,
+                  "Stop: Seed (%.3f, %.3f) is outside valid region "
+                  "(xmin=%.3f, xmax=%.3f, ymin=%.3f, ymax=%.3f)!\n",
+                  x0, y0, p_x[0], p_x[nx-1], p_x[0], p_x[nx-1]);
+        }
         continue; /* continue with next point in file */
       }
 
@@ -404,15 +427,19 @@ int main( int argc, char** argv )
         dist += (delta * dir);
 
         if(isnan(vxi) || isnan(vyi)) {
-          if (verbose>1){
-            fprintf(stderr,"Error: isnan vxi || vyi\n");
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
           }
           break;
         }
         
         if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
-          if (verbose>1){
-            fprintf(stderr,"Error: isnan vxi || vyi\n");
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xi,yi,x0,y0);
           }
           break;
         }
@@ -426,13 +453,17 @@ int main( int argc, char** argv )
          */
         if ( (x0+dx0 > p_x[nx-1]) || (x0+dx0 < p_x[0]) ) {
           if (verbose){
-            fprintf(stderr,"Stop: estimate x0+dx0 (%.3f) is outside valid region.\n",x0+dx0);
+            fprintf(stderr,
+                    "Stop: estimated x0+dx0 (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+                    x0+dx0,x0,y0);
           }
           break;
         }
         if ( (y0+dy0 > p_y[ny-1]) || (y0+dy0 < p_y[0]) ) {
           if (verbose){
-            fprintf(stderr,"Stop: estimate y0+dy0 (%.3f) is outside valid region.\n",y0+dy0);
+            fprintf(stderr,
+                    "Stop: estimated y0+dy0 (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+                    y0+dy0,x0,y0);
           }
           break;
         }
@@ -447,7 +478,6 @@ int main( int argc, char** argv )
         if ( i > 0 && k_opt == 4) {
           ex = dx3/6.0f - vxi*delta/6.0f;
           ey = dy3/6.0f - vyi*delta/6.0f;
-          /*      fprintf(stderr,"%d %.6f\n",i,SQRT(ex*ex + ey*ey)); */
         }
 
         /* early break for Euler method. Continue with next i */
@@ -463,8 +493,22 @@ int main( int argc, char** argv )
         xt = xi + dir*dx0/2.0f;
         yt = yi + dir*dy0/2.0f;
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xt,yt,&vxi,&vyi);
-        if(isnan(vxi) || isnan(vyi)) break;
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) break;
+        if(isnan(vxi) || isnan(vyi)) {
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
+          }
+          break;
+        }
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
+          }
+          break;
+        }
         dx1 = dir * delta * vxi/uv;
         dy1 = dir * delta * vyi/uv;
 
@@ -480,8 +524,22 @@ int main( int argc, char** argv )
         yt = yi + dy1 / 2.0f;
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xt,yt,&vxi,&vyi);
 
-        if(isnan(vxi) || isnan(vyi)) break;
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) break;
+        if(isnan(vxi) || isnan(vyi)) {
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
+          }
+          break;
+        }
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
+          }
+          break;
+        }
         dx2 = dir * delta * vxi/uv;
         dy2 = dir * delta * vyi/uv;
 
@@ -498,8 +556,22 @@ int main( int argc, char** argv )
         yt = yi + dy2;
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xt,yt,&vxi,&vyi);
 
-        if(isnan(vxi) || isnan(vyi)) break;
-        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) break;
+        if(isnan(vxi) || isnan(vyi)) {
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
+          }
+          break;
+        }
+        if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0f ) {
+          if (verbose) {
+            fprintf(stderr,
+                    "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
+                    "for seed (%.3f, %.3f).\n",xt,yt,x0,y0);
+          }
+          break;
+        }
         dx3 = dir * delta * vxi/uv;
         dy3 = dir * delta * vyi/uv;
 
@@ -520,13 +592,17 @@ int main( int argc, char** argv )
          */
         if ( (xi+dx > p_x[nx-1]) || (xi+dx < p_x[0]) ) {
           if (verbose){
-            fprintf(stderr,"Stop: estimate xi+dx (%.3f) is outside valid region.\n",xi+dx);
+            fprintf(stderr,
+                    "Stop: estimated xi+dx (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+                    xi+dx,x0,y0);
           }
           break;
         }
         if ( (yi+dy > p_y[ny-1]) || (yi+dy < p_y[0]) ) {
           if (verbose){
-            fprintf(stderr,"Stop: estimate yi+dy (%.3f) is outside valid region.\n",yi+dy);
+            fprintf(stderr,
+                    "Stop: estimated yi+dy (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+                    yi+dy,x0,y0);
           }
           break;
         }
