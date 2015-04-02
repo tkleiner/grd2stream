@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2015-04-02 13:33:41 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2015-04-02 14:09:33 (tkleiner)>"
 #endif
 
 /*
@@ -57,9 +57,17 @@ static int interp2(size_t nx, size_t ny, double *p_x, double *p_y,
                    double *p_vxi,double *p_vyi);
 
 /**
- * returns a value j such that x is between xx[j] and xx[j+1]
+ * returns a value i such that x is between xx[i] and xx[i+1] 
+ * for non-equidistant grids
  */
 static void locate(double* xx, size_t n, double x, size_t *j);
+
+
+/**
+ * old version (obsolete)
+ */
+void locate_slow(double* xx, size_t n, double x, size_t *j);
+
 
 /**
  * print usage information and exit
@@ -705,6 +713,10 @@ int interp2(size_t nx, size_t ny, double* p_x, double* p_y,
   size_t i00,i01,i10,i11;
   double p1=0.0,p2=0.0,q1=0.0,q2=0.0;
 
+#if TEST_LOCATE
+  size_t ixel_dbg = 0;
+#endif
+  
   debug_printf(DEBUG_INFO,"search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n",
                xi,0,p_x[0],nx-1,p_x[nx-1]);
   debug_printf(DEBUG_INFO,"search yi = %.3f in y[%lu] = %.3f < yi < y[%lu] = %.3f\n",
@@ -718,6 +730,11 @@ int interp2(size_t nx, size_t ny, double* p_x, double* p_y,
     ixel = 0;
   } else {
     locate(p_x, nx, xi, &ixel);
+#if TEST_LOCATE
+    locate_slow(p_x, nx, xi, &ixel_dbg);
+    fprintf(stderr,"x[%lu] = %.3f  <=> x[%lu] = %.3f\n",
+            ixel,p_x[ixel],ixel_dbg,p_x[ixel_dbg]);
+#endif    
   }
   debug_printf(DEBUG_INFO,"found xi = %.3f -> x[%lu] = %.3f\n",
                xi,ixel,p_x[ixel]);
@@ -779,35 +796,48 @@ int interp2(size_t nx, size_t ny, double* p_x, double* p_y,
 /**
  *
  */
-void locate(double* xx, size_t n, double x, size_t *j)
+void locate_slow(double* xx, size_t n, double x, size_t *j)
 {
-#if 0
-  /* fast search
-   * table lookup */
-  size_t ju,jm,jl;
-  int ascnd;
-  jl=0;
-  ju=n+1;
-  ascnd=(xx[n] >= xx[1]);
-  while (ju-jl > 1) {
-    jm=(ju+jl) >> 1;
-    if (x >= xx[jm] == ascnd)
-      jl=jm;
-    else
-      ju=jm;
-  }
-  if (x == xx[1]) *j=1;
-  else if(x == xx[n]) *j=n-1;
-  else *j=jl;
-#else
   size_t i;
   i=0;
   while (xx[i] <= x) {
     i++;
   }
   *j = i-1;
-#endif
 } /* locate */
+
+
+/*
+ *
+ */
+void locate(double* xx, size_t n, double x, size_t *i)
+{
+  /* fast search
+   * table lookup */
+  size_t iu,im,il;
+  int ascnd;
+
+  il=0;
+  iu=n-1;
+  ascnd=(xx[n-1] >= xx[0]);
+  while (iu-il > 1) {
+    im=(iu+il) >> 1;
+    if (x >= xx[im] == ascnd)
+      il=im;
+    else
+      iu=im;
+  }
+
+  if (x == xx[0])
+    *i = 0;
+  else if(x == xx[n-1])
+    *i = n-1;
+  else
+    *i = il;
+
+} /* locate */
+
+
 
 
 /**
