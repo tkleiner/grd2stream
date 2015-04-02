@@ -19,6 +19,8 @@ dens=50
 seed=divopt
 seed=regular
 
+#grd2stream="../src/grd2stream -r -n 200"
+grd2stream="../src/grd2stream"
 
 ##
 ## create simple topography: z(x,y) = sin(x*y)*cos(x)
@@ -75,9 +77,9 @@ grdsample $tmp_dir/u.grd $dreg -I$cinc -G$tmp_dir/u_c.grd
 grdsample $tmp_dir/v.grd $dreg -I$cinc -G$tmp_dir/v_c.grd
 grd2xyz $tmp_dir/mag_c.grd | gmtconvert -F0,1 > $tmp_dir/start.d
 cat $tmp_dir/start.d | \
-  grd2stream $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_f.d
+  $grd2stream $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_f.d
 cat $tmp_dir/start.d | \
-  grd2stream -b $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_b.d
+  $grd2stream -b $tmp_dir/u.grd $tmp_dir/v.grd > $tmp_dir/lines_b.d
 
 ##
 ## colorscheme

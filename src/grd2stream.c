@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2015-04-02 13:19:46 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2015-04-02 13:33:41 (tkleiner)>"
 #endif
 
 /*
@@ -99,7 +99,7 @@ void log_break_dx(double x, double x0, double y0)
 {
   if (log_breaks){
     fprintf(stderr,
-            "Stop: estimated x + dx (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+            "Stop: Estimated x + dx (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
             x,x0,y0);
   }
 }
@@ -108,7 +108,7 @@ void log_break_dy(double y, double x0, double y0)
 {
   if (log_breaks){
     fprintf(stderr,
-            "Stop: estimated y + dy (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
+            "Stop: Estimated y + dy (%.3f) is outside valid region for seed (%.3f, %.3f).\n",
             y,x0,y0);
   }
 }
@@ -117,7 +117,7 @@ void log_break_stepsize(double stpsz, double xinc, double yinc, double x0, doubl
 {
   if (log_breaks){
     fprintf(stderr,
-            "Stop: stepsize to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n",
+            "Stop: Stepsize to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n",
             stpsz,xinc,yinc,x0,y0);
   }
 }
