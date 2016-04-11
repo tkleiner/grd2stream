@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2015-04-02 14:09:33 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2016-04-11 22:47:23 (tkleiner)>"
 #endif
 
 /*
@@ -174,6 +174,8 @@ int main( int argc, char** argv )
   double *p_vx=NULL;
   double *p_vy=NULL;
 
+
+  
   /* x and y coordinates of the coarse grid */
   double *p_xc = NULL;
   double *p_yc = NULL;
@@ -187,6 +189,18 @@ int main( int argc, char** argv )
   char* p_vy_name = NULL;
   char* p_file_name = NULL;
 
+
+  size_t nxm=0,nym=0;
+  size_t im=0,jm=0;
+  double xm_inc = 0.0, ym_inc = 0.0;
+  char* p_mask_name = NULL;
+  double *p_xm=NULL;
+  double *p_ym=NULL;
+  double *p_mask=NULL; /* read as double for now */
+  double mask_val = 0.0;
+
+
+  
   FILE* fp = NULL;
   char line[BUFSIZ];
 
@@ -199,6 +213,7 @@ int main( int argc, char** argv )
   /* experimental options */
   int L_opt = 0; /* 3col input */
   int D_opt = 0; /* check distance */
+  int M_opt = 0; /* read MASK */
 
 
   /* Initialize logging facility */
@@ -210,7 +225,7 @@ int main( int argc, char** argv )
 #endif
 
   /* parse commandline args */
-  while ((oc = getopt (argc, argv, "bd:lhvk:n:f:VLDr")) != -1)
+  while ((oc = getopt (argc, argv, "bd:lhvk:n:f:VLDrM:")) != -1)
     switch (oc) {
     case 'b': 
       /* go backward */
@@ -242,6 +257,10 @@ int main( int argc, char** argv )
     case 'f': 
       /* read initial points from file */
       p_file_name = (optarg); break; 
+    case 'M': 
+      /* read mask */
+      M_opt=1;
+      p_mask_name = (optarg); break; 
     case 'V': 
       /* verbose opttion */
       verbose++; break;
@@ -256,8 +275,10 @@ int main( int argc, char** argv )
     }
   
   if ((argc - optind) != 2) usage();
+  
   p_vx_name = (char*)argv[optind];
   p_vy_name = (char*)argv[optind+1];
+
   
   /* Order of integration */
   if ( (k_opt < 1 && k_opt > 4) || (k_opt == 3) ) {
@@ -276,10 +297,23 @@ int main( int argc, char** argv )
   /* read the grid files */
   err  = grdread (p_vx_name, &nx, &ny, &p_x, &p_y, &p_vx);
   err += grdread (p_vy_name, &nx, &ny, &p_x, &p_y, &p_vy);
+  if ( M_opt > 0 && p_mask_name != NULL) {
+    err  += grdread (p_mask_name, &nxm, &nym, &p_xm, &p_ym, &p_mask);
+    xm_inc = p_xm[1]- p_xm[0];
+    ym_inc = p_ym[1]- p_ym[0];
+    if (verbose) {
+      fprintf(stderr,"Input mask:\n");
+      fprintf(stderr,"xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n",
+              p_xm[0],p_xm[nxm-1],xm_inc,nxm);
+      fprintf(stderr,"ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n",
+              p_ym[0],p_ym[nym-1],ym_inc,nym);
+    }
+  }
   if (err != 0) {
     fprintf(stderr,"error reading grd files\n");
     exit(EXIT_FAILURE);
   }
+  
 
   /* grid limits */
   xmin = p_x[0];
@@ -459,19 +493,34 @@ int main( int argc, char** argv )
           fprintf(stderr,
                   "# x = %.3f, y = %.3f, vx = %.3f, vy = %.3f\n",xi,yi,vxi,vyi);
         }
+        /* check if mask reached */
+        if (M_opt > 0) {
+          im = (size_t)( ((xi - p_xm[0]) / xm_inc));
+          jm = (size_t)( ((yi - p_ym[0]) / ym_inc));
+          mask_val = p_mask[jm*nxm + im];
+        }
 
         /* this is the output */
         if (! (iter % freq) ) {
           if(l_opt) {
             printf("%.3f %.3f %.3f %.3f %.3f\n",xi,yi,dist,vxi,vyi);
           } else {
-            printf("%.3f %.3f %.3f\n",xi,yi,dist);
+            if (M_opt > 0) {
+              printf("%.3f %.3f %.3f %.3f\n",xi,yi,dist,mask_val);
+            } else {
+              printf("%.3f %.3f %.3f\n",xi,yi,dist);
+            }
           }
         }
 
-        /* advance now */
-        dist += (delta * dir);
+        if (isnan(mask_val) || mask_val == 0.0) {
+          /* continue until valid mask value is found */
+        } else {
+          /* break valid mask point */
+          break;
+        }
 
+        
         if(isnan(vxi) || isnan(vyi)) {
           log_break_nan(xi,yi,x0,y0);
           break;
@@ -480,6 +529,9 @@ int main( int argc, char** argv )
           log_break_zero(xi,yi,x0,y0);
           break;
         }
+
+        /* advance now */
+        dist += (delta * dir);
         dx0 = dir * delta * vxi/uv;
         dy0 = dir * delta * vyi/uv;
 
@@ -620,7 +672,6 @@ int main( int argc, char** argv )
         jb = (size_t)( ((yi - p_y[0]) / yb_inc));
         blank[jb*nbx + ib] = npoly;
 
-
         /* if (verbose) { */
           
         /*   fprintf(stderr," xi=%15.5f yi=%15.5f\n",xi,yi); */
@@ -692,6 +743,11 @@ int main( int argc, char** argv )
   if(p_yc) free(p_yc);
   if(p_vx) free(p_vx);
   if(p_vy) free(p_vy);
+
+  if(p_mask) free(p_mask);
+  if(p_xm) free(p_xm);
+  if(p_ym) free(p_ym);
+  
   if(blank) free(blank);
 
 #if 0
