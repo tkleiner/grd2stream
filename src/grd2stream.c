@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2016-04-11 22:47:23 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2016-04-11 22:54:57 (tkleiner)>"
 #endif
 
 /*
@@ -517,6 +517,8 @@ int main( int argc, char** argv )
           /* continue until valid mask value is found */
         } else {
           /* break valid mask point */
+          /* print start position and mask of final position */
+          printf("#M# %.3f %.3f %.3f\n",x0,y0,mask_val);
           break;
         }
 
