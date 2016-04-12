@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2016-04-12 08:57:56 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2016-04-12 13:54:39 (tkleiner)>"
 #endif
 
 /*
@@ -732,6 +732,7 @@ int main( int argc, char** argv )
         lim=SQRT(dx*dx+dy*dy);
         if (lim*1000.0 < (MIN(x_inc,y_inc))) {
           log_break_stepsize(lim, x_inc, y_inc, x0, y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
 
