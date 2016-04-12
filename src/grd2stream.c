@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2016-04-11 22:54:57 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2016-04-12 08:57:56 (tkleiner)>"
 #endif
 
 /*
@@ -525,10 +525,12 @@ int main( int argc, char** argv )
         
         if(isnan(vxi) || isnan(vyi)) {
           log_break_nan(xi,yi,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
           log_break_zero(xi,yi,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
 
@@ -543,10 +545,12 @@ int main( int argc, char** argv )
          */
         if ( (x0+dx0 > p_x[nx-1]) || (x0+dx0 < p_x[0]) ) {
           log_break_dx(x0+dx0, x0, y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         if ( (y0+dy0 > p_y[ny-1]) || (y0+dy0 < p_y[0]) ) {
           log_break_dy(y0+dy0, x0, y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
 
@@ -577,10 +581,12 @@ int main( int argc, char** argv )
         (void)interp2(nx,ny,p_x,p_y,p_vx,p_vy,xt,yt,&vxi,&vyi);
         if(isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt,yt,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
           log_break_zero(xt,yt,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         dx1 = dir * delta * vxi/uv;
@@ -600,10 +606,12 @@ int main( int argc, char** argv )
 
         if(isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt,yt,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
           log_break_zero(xt,yt,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         dx2 = dir * delta * vxi/uv;
@@ -624,10 +632,12 @@ int main( int argc, char** argv )
 
         if(isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt,yt,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         if ( (uv = SQRT(vxi*vxi + vyi*vyi)) <= 0.0 ) {
           log_break_zero(xt,yt,x0,y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         dx3 = dir * delta * vxi/uv;
@@ -650,10 +660,12 @@ int main( int argc, char** argv )
          */
         if ( (xi+dx > p_x[nx-1]) || (xi+dx < p_x[0]) ) {
           log_break_dx(xi+dx, x0, y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
         if ( (yi+dy > p_y[ny-1]) || (yi+dy < p_y[0]) ) {
           log_break_dy(yi+dy, x0, y0);
+          if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
           break;
         }
 
@@ -727,6 +739,10 @@ int main( int argc, char** argv )
       /* end of work for one stream line */
       if (iter == maxiter) {
         log_break_maxiter(x0, y0);
+        if(M_opt)printf("#M# %.3f %.3f NaN\n",x0,y0);
+        /* if (M_opt) { */
+        /*   fprintf(stderr,"#ERROR: maxiter reached for x0 = %.3f, y0 = %.3f without reaching the mask\n", x0,y0); */
+        /* } */
       }
       
     }
