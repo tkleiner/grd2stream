@@ -26,4 +26,5 @@ example/_tmp*
 *.dSYM
 example/*.eps
 example/*.pdf
+example/*.grd
 config.h.in~
