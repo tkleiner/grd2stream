@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2016-04-12 13:54:39 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2016-06-22 07:28:37 (tkleiner)>"
 #endif
 
 /*
@@ -194,6 +194,7 @@ int main( int argc, char** argv )
   size_t im=0,jm=0;
   double xm_inc = 0.0, ym_inc = 0.0;
   char* p_mask_name = NULL;
+  char* p_blank_name = NULL;
   double *p_xm=NULL;
   double *p_ym=NULL;
   double *p_mask=NULL; /* read as double for now */
@@ -213,6 +214,7 @@ int main( int argc, char** argv )
   /* experimental options */
   int L_opt = 0; /* 3col input */
   int D_opt = 0; /* check distance */
+  int B_opt = 0; /* write blank file: this is experimental */
   int M_opt = 0; /* read MASK */
 
 
@@ -225,7 +227,7 @@ int main( int argc, char** argv )
 #endif
 
   /* parse commandline args */
-  while ((oc = getopt (argc, argv, "bd:lhvk:n:f:VLDrM:")) != -1)
+  while ((oc = getopt (argc, argv, "bd:lhvk:n:f:VLDrM:B:")) != -1)
     switch (oc) {
     case 'b': 
       /* go backward */
@@ -261,6 +263,10 @@ int main( int argc, char** argv )
       /* read mask */
       M_opt=1;
       p_mask_name = (optarg); break; 
+    case 'B': 
+      /* read mask */
+      B_opt=1;
+      p_blank_name = (optarg); break; 
     case 'V': 
       /* verbose opttion */
       verbose++; break;
@@ -750,10 +756,9 @@ int main( int argc, char** argv )
   }
 
   /* write blank array for later usage */
-#ifdef LATER_USAGE
-  grdwrite ("blank.nc", nbx, nby, p_xc, p_yc, (void *)blank, NC_INT);
-#endif
-  
+  if (B_opt && NULL != p_blank_name) {
+    grdwrite (p_blank_name, nbx, nby, p_xc, p_yc, (void *)blank, NC_INT);
+  }
 
   if (fp != stdin) fclose(fp);
   if(p_x) free(p_x);
