@@ -23,6 +23,7 @@ src/grd2stream
 example/_tmp*
 *.tar.gz
 *.o
+*.dSYM
 example/*.eps
 example/*.pdf
 config.h.in~
