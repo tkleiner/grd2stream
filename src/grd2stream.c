@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2016-06-22 07:28:37 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2019-03-21 09:37:20 (tkleiner)>"
 #endif
 
 /*
@@ -157,7 +157,7 @@ int main( int argc, char** argv )
   double y0=0.0,x0=0.0;   /* start positions */
   double yi=0.0,xi=0.0;
   double yt=0.0,xt=0.0;
-  double vxi=0.0,vyi=0.0,uv=0.0;
+  double vxi=0.0,vyi=0.0,uv=0.0; /* vx, vy and magnitude of velocity */
 
   double dx0=0.0,dx1=0.0,dx2=0.0,dx3=0.0;
   double dy0=0.0,dy1=0.0,dy2=0.0,dy3=0.0;
@@ -165,6 +165,7 @@ int main( int argc, char** argv )
   double dx=0.0,dy=0.0; /* local error */
   double lim=0.0;
 
+  double itime; /* stream line integration time */
   double dist,dout,delta = 1000.0; /* unit m ???*/
   double dir=1.0;              /* direction (1.. forward, -1..backward) */
   unsigned int freq = 1;
@@ -210,6 +211,7 @@ int main( int argc, char** argv )
   int d_opt = 0; /* delta */
   int k_opt = 4; /* Runge Kutta 4 */
   int l_opt = 0; /* print also u,v in columns 4,5 */
+  int t_opt = 0; /* print integration time in column 6*/
 
   /* experimental options */
   int L_opt = 0; /* 3col input */
@@ -227,8 +229,11 @@ int main( int argc, char** argv )
 #endif
 
   /* parse commandline args */
-  while ((oc = getopt (argc, argv, "bd:lhvk:n:f:VLDrM:B:")) != -1)
+  while ((oc = getopt (argc, argv, "tbd:lhvk:n:f:VLDrM:B:")) != -1)
     switch (oc) {
+    case 't': 
+      /* report time */
+      t_opt=1; break;
     case 'b': 
       /* go backward */
       b_opt=1; break;
@@ -295,7 +300,12 @@ int main( int argc, char** argv )
     usage();
   }
 
-  
+
+  /* u,v output and integration time output at the same time is invalid */
+  if ( (t_opt > 0 && l_opt > 0) ) {
+    usage();
+  }
+
   if(b_opt) {
     dir = -1.0;
   }
@@ -475,6 +485,7 @@ int main( int argc, char** argv )
       npoly++;
       printf("> streamline: %u\n",npoly);
       dist = 0.0;
+      itime = 0.0;
       
       /* simple step iteration */
       xi = x0;
@@ -506,19 +517,36 @@ int main( int argc, char** argv )
           mask_val = p_mask[jm*nxm + im];
         }
 
+        /* /\* this is the output *\/ */
+        /* if (! (iter % freq) ) { */
+        /*   if(l_opt) { */
+        /*     printf("%.3f %.3f %.3f %.3f %.3f\n",xi,yi,dist,vxi,vyi); */
+        /*   } else { */
+        /*     if (M_opt > 0) { */
+        /*       printf("%.3f %.3f %.3f %.3f\n",xi,yi,dist,mask_val); */
+        /*     } else { */
+        /*       printf("%.3f %.3f %.3f\n",xi,yi,dist); */
+        /*     } */
+        /*   } */
+        /* } */
+
+
         /* this is the output */
         if (! (iter % freq) ) {
           if(l_opt) {
             printf("%.3f %.3f %.3f %.3f %.3f\n",xi,yi,dist,vxi,vyi);
+          } else if (t_opt) {
+            printf("%.3f %.3f %.3f %.3f %.3f %.3f\n",xi,yi,dist,vxi,vyi,itime);
+          } else if (M_opt > 0) {
+            printf("%.3f %.3f %.3f %.3f\n",xi,yi,dist,mask_val);
           } else {
-            if (M_opt > 0) {
-              printf("%.3f %.3f %.3f %.3f\n",xi,yi,dist,mask_val);
-            } else {
-              printf("%.3f %.3f %.3f\n",xi,yi,dist);
-            }
+            printf("%.3f %.3f %.3f\n",xi,yi,dist);
           }
+
         }
 
+
+        
         if (isnan(mask_val) || mask_val == 0.0) {
           /* continue until valid mask value is found */
         } else {
@@ -545,6 +573,8 @@ int main( int argc, char** argv )
         dx0 = dir * delta * vxi/uv;
         dy0 = dir * delta * vyi/uv;
 
+        itime += delta/uv;
+        
 
         /*
          * check initial guess
@@ -679,6 +709,7 @@ int main( int argc, char** argv )
         xi += dx;
         yi += dy;
 
+        /* integration time is based velocity at the position 
 
 
         /*
@@ -935,7 +966,8 @@ void usage(void)
           "  -b                  backward steps\n"
           "  -d inc              stepsize\n"
           /* "  -k                  select stepping method (default: RK4)\n" */
-          "  -l                  long output format: 'x y dist v_x v_y' (5 cols)\n"
+          "  -l                  output format: 'x y dist v_x v_y' (5 cols)\n"
+          "  -t                  output format: 'x y dist v_x v_y time' (6 cols)\n"
           "  -n maxsteps         maximum number of steps (default: %d)\n"
           "  -V                  verbose output\n"
           "  -r                  report why a streamline stopped to stderr (default: off)\n"
