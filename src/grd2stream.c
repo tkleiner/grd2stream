@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2019-03-21 09:37:20 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2019-10-09 12:47:30 (tkleiner)>"
 #endif
 
 /*
@@ -140,6 +140,26 @@ void log_break_maxiter(double x0, double y0)
 }
 
 
+void log_break_maxtime(double x0, double y0, unsigned long iter)
+{
+  if (log_breaks){
+    fprintf(stderr,
+            "Stop: Maximum integration time reached for seed (%.3f, %.3f) after %u itterations\n",
+            x0,y0,(unsigned int)iter);
+  }
+}
+
+void log_break_delta(double x0, double y0, unsigned long iter, double delta)
+{
+  if (log_breaks){
+    fprintf(stderr,
+            "Stop: Invalid delta = %f for seed (%.3f, %.3f) after %u itterations\n",
+            delta,x0,y0,(unsigned int)iter);
+  }
+}
+
+
+
 
 /* for logging */
 const char *program_name = PACKAGE_NAME;
@@ -165,8 +185,9 @@ int main( int argc, char** argv )
   double dx=0.0,dy=0.0; /* local error */
   double lim=0.0;
 
-  double itime; /* stream line integration time */
-  double dist,dout,delta = 1000.0; /* unit m ???*/
+  double itime;        /* stream line integration time in time units given by thge velocity field */
+  double maxtime;      /* same units as itime, less equal zero indicates an error */
+  double dist,dout,delta,delta_initial = 1000.0; /* unit m ???*/
   double dir=1.0;              /* direction (1.. forward, -1..backward) */
   unsigned int freq = 1;
 
@@ -174,8 +195,6 @@ int main( int argc, char** argv )
   double *p_y=NULL;
   double *p_vx=NULL;
   double *p_vy=NULL;
-
-
   
   /* x and y coordinates of the coarse grid */
   double *p_xc = NULL;
@@ -212,7 +231,9 @@ int main( int argc, char** argv )
   int k_opt = 4; /* Runge Kutta 4 */
   int l_opt = 0; /* print also u,v in columns 4,5 */
   int t_opt = 0; /* print integration time in column 6*/
+  int T_opt = 0; /* stop after given time */
 
+  
   /* experimental options */
   int L_opt = 0; /* 3col input */
   int D_opt = 0; /* check distance */
@@ -229,11 +250,14 @@ int main( int argc, char** argv )
 #endif
 
   /* parse commandline args */
-  while ((oc = getopt (argc, argv, "tbd:lhvk:n:f:VLDrM:B:")) != -1)
+  while ((oc = getopt (argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:")) != -1)
     switch (oc) {
     case 't': 
       /* report time */
       t_opt=1; break;
+    case 'T': 
+      /* maximum integration time */
+      T_opt=1; maxtime = (double) atof(optarg); break;
     case 'b': 
       /* go backward */
       b_opt=1; break;
@@ -371,7 +395,7 @@ int main( int argc, char** argv )
 
   /* default freq = 2 samples per grid cell */
   freq = 2;
-  delta = MIN( x_inc, y_inc ) / ( (double) freq );
+  delta_initial = MIN( x_inc, y_inc ) / ( (double) freq );
 
   /*
    * TODO: makes no sense at the moment
@@ -382,7 +406,7 @@ int main( int argc, char** argv )
     freq = 1;
     dout = MIN( x_inc, y_inc ) / ( (double) 5 );
   }
-  delta = dout / ( (double) freq );
+  delta_initial = dout / ( (double) freq );
 
   
   if (verbose) {
@@ -405,9 +429,9 @@ int main( int argc, char** argv )
   }
   
 
-  if ( (delta > x_inc) || (delta > y_inc) ) {
+  if ( (delta_initial > x_inc) || (delta_initial > y_inc) ) {
     fprintf(stderr,"WARN: Stepsize to large: %.3f > (%.3f, %.3f)\n",
-            delta,x_inc,y_inc);
+            delta_initial,x_inc,y_inc);
   }
 
 
@@ -486,6 +510,7 @@ int main( int argc, char** argv )
       printf("> streamline: %u\n",npoly);
       dist = 0.0;
       itime = 0.0;
+      delta = delta_initial; /* reset delta for next stream line, important for -T option */
       
       /* simple step iteration */
       xi = x0;
@@ -568,11 +593,37 @@ int main( int argc, char** argv )
           break;
         }
 
+        /* prepare the advance */
+        if (T_opt) {
+          /* next time would be t + dt, dt = delta/uv */
+          double time_excess = itime + delta/uv - maxtime;
+          if(time_excess > 0.0) {
+            /* reduce time step length to match target time 
+             * new_dt = dt - time_excess = delta/uv - time_excess
+             * new_delta = new_dt * uv
+             */
+            if(verbose) printf("#T# reducing delta = %.3f ",delta);
+            delta = (delta/uv - time_excess)*uv;
+            if(verbose) printf(" -> %.3f to match maxtime = %f \n",delta, maxtime);
+          } else if (time_excess < 0.0) {
+            /* regular time step required */
+          } else {
+            log_break_maxtime(x0, y0, iter);
+            break;
+          }
+        }
+
+
+        if (delta <= 0.0) {
+          log_break_delta(x0, y0, iter, delta);
+          break;
+        }
+        
+        
         /* advance now */
         dist += (delta * dir);
         dx0 = dir * delta * vxi/uv;
         dy0 = dir * delta * vyi/uv;
-
         itime += delta/uv;
         
 
@@ -709,9 +760,6 @@ int main( int argc, char** argv )
         xi += dx;
         yi += dy;
 
-        /* integration time is based velocity at the position 
-
-
         /*
          * check if already visited
          *
@@ -723,42 +771,51 @@ int main( int argc, char** argv )
         jb = (size_t)( ((yi - p_y[0]) / yb_inc));
         blank[jb*nbx + ib] = npoly;
 
-        /* if (verbose) { */
-          
-        /*   fprintf(stderr," xi=%15.5f yi=%15.5f\n",xi,yi); */
-        /*   fprintf(stderr," ib=%d jb=%d\n",ib,jb); */
-        /*   fprintf(stderr," xb=%15.5f yb=%15.5f\n",p_xc[ib],p_yc[jb]); */
+        /*
+         * START TESTING HERE
+         */
 
-        /* } */
+#if 0        
+        if (verbose) {
+          
+          fprintf(stderr," xi=%15.5f yi=%15.5f\n",xi,yi);
+          fprintf(stderr," ib=%d jb=%d\n",ib,jb);
+          fprintf(stderr," xb=%15.5f yb=%15.5f\n",p_xc[ib],p_yc[jb]);
+
+        }
 
         
         
-        /* if (D_opt) {         */
+        if (D_opt) {
           
-        /*   if (ib <0 || ib > nbx-1) { */
-        /*     fprintf(stdout,"# error: %lu %lu %f\n",ib,nbx,(xi - p_x[0])); */
-        /*     break; */
-        /*   } */
-        /*   if (jb <0 || jb > nby-1) { */
-        /*     fprintf(stdout,"# error: %lu %lu %f\n",ib,nby,(yi - p_y[0])); */
-        /*     break; */
-        /*   } */
+          if (ib <0 || ib > nbx-1) {
+            fprintf(stdout,"# error: %lu %lu %f\n",ib,nbx,(xi - p_x[0]));
+            break;
+          }
+          if (jb <0 || jb > nby-1) {
+            fprintf(stdout,"# error: %lu %lu %f\n",ib,nby,(yi - p_y[0]));
+            break;
+          }
           
-        /*   if ( (blank[jb*nbx + ib] > 0) && (blank[jb*nbx + ib] != npoly)) { */
+          if ( (blank[jb*nbx + ib] > 0) && (blank[jb*nbx + ib] != npoly)) {
             
-        /*     if (verbose) { */
-        /*       fprintf(stdout,"# blank: %lu %lu %d\n", */
-        /*               ib,jb, blank[jb*nbx + ib]); */
-        /*       fprintf(stdout,"# Stop: x = %.3f, y = %.3f allready visited by %d\n", */
-        /*               xi,yi,(int)blank[jb*nbx + ib]); */
+            if (verbose) {
+              fprintf(stdout,"# blank: %lu %lu %d\n",
+                      ib,jb, blank[jb*nbx + ib]);
+              fprintf(stdout,"# Stop: x = %.3f, y = %.3f allready visited by %d\n",
+                      xi,yi,(int)blank[jb*nbx + ib]);
               
-        /*     } */
-        /*     break; */
+            }
+            break;
             
-        /*   } else { */
-        /*     blank[jb*nbx + ib] = npoly; */
-        /*   } */
-        /* } */
+          } else {
+            blank[jb*nbx + ib] = npoly;
+          }
+        }
+#endif
+        /*
+         * END TESTING HERE
+         */
 
 
         if(verbose>1) {
@@ -968,6 +1025,7 @@ void usage(void)
           /* "  -k                  select stepping method (default: RK4)\n" */
           "  -l                  output format: 'x y dist v_x v_y' (5 cols)\n"
           "  -t                  output format: 'x y dist v_x v_y time' (6 cols)\n"
+          "  -T maxtime          maximum integration time (default: none)\n"
           "  -n maxsteps         maximum number of steps (default: %d)\n"
           "  -V                  verbose output\n"
           "  -r                  report why a streamline stopped to stderr (default: off)\n"
