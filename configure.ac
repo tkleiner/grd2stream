@@ -12,7 +12,7 @@ AC_CONFIG_MACRO_DIR([m4])
 # Put preprocessor symbols in config.h
 AC_CONFIG_HEADERS([config.h])
 # Use automake to create Makefiles
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([tar-ustar])
 
 
 dnl canonical host-system: host, host_cpu, host_vendor, and host_os 
