@@ -63,6 +63,10 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_RANLIB
 
+AC_PATH_PROG([GENGETOPT], [gengetopt])
+AM_CONDITIONAL(GGO, test -n "$GENGETOPT")
+
+
 # Checks for libraries.
 #netcdf first!
 AC_CHECK_LIB([m], [sqrt])

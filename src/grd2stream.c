@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2019-10-09 12:47:30 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2019-11-08 10:08:29 (tkleiner)>"
 #endif
 
 /*
@@ -39,6 +39,10 @@
 #include "debug_printf.h"
 #include "log.h"
 
+#include "options.h"
+
+
+
 
 #define MAXSTEPS 10000
 #define SUBSTEPS 2
@@ -47,6 +51,11 @@
 #define MAX(X,Y) ( ((X) > (Y)) ? (X) : (Y) )
 
 #define SQRT sqrtf
+
+
+#define ERROR_OK         0
+#define ERROR_USER       1
+#define ERROR_READ_OPEN  2
 
 
 /**
@@ -240,6 +249,35 @@ int main( int argc, char** argv )
   int B_opt = 0; /* write blank file: this is experimental */
   int M_opt = 0; /* read MASK */
 
+
+  struct gengetopt_args_info info;
+
+#if 0
+
+  
+  /* parse the cmdline */
+  if (options(argc, argv, &info) != 0) {
+    exit(1) ;
+  }
+
+
+  if (info.help_given)
+    {
+      options_print_help();
+      return ERROR_OK;
+    }
+
+  if (info.version_given)
+    {
+      options_print_version();
+      return ERROR_OK;
+    }
+#endif
+
+
+
+
+  
 
   /* Initialize logging facility */
   /*  log_initialize(opt_nodaemon ? LOG_TO_STDERR : LOG_TO_SYSLOG);*/

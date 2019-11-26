@@ -12,7 +12,7 @@ AM_LDFLAGS = $(STATIC_LIBS)
 endif
 
 bin_PROGRAMS = grd2stream
-noinst_HEADERS = debug_printf.h grdio.h log.h getopt.h
+noinst_HEADERS = debug_printf.h grdio.h log.h #options.h
 
 ##
 ## grd2stream
@@ -20,7 +20,15 @@ noinst_HEADERS = debug_printf.h grdio.h log.h getopt.h
 grd2stream_CFLAGS = 
 grd2stream_LDFLAGS = $(STATIC_LIBS)
 grd2stream_LDADD =   #-lnetcdf
-grd2stream_SOURCES  = grdio.c debug_printf.c log.c getopt.c grd2stream.c 
+grd2stream_SOURCES  = grdio.c debug_printf.c log.c options.c grd2stream.c
+
+if GGO
+BUILT_SOURCES = options.c
+options.c options.h: options.ggo
+#	$(GENGETOPT) -u -N -i options.ggo -f options -F options
+	$(GENGETOPT) --unamed-opts --no-version --input=options.ggo --func-name=options --file-name=options
+endif
+
 
 
 CLEANFILES = *.c~ *.h~
