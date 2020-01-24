@@ -56,6 +56,6 @@ Contribute
 ----------
 
 - Issue Tracker: https://gitlab.awi.de/tkleiner/grd2stream/issues
-- Source Code: https://gitlab.awi.de/tkleiner/grd2stream/master
+- Source Code: https://gitlab.awi.de/tkleiner/grd2stream/tree/master
 
 
