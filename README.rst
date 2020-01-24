@@ -7,6 +7,18 @@ is not used at the moment.
     echo "0 0" | grd2stream vx.grd vy.grd | psxy -m -R -J ...
 
 
+Example
+-------
+
+.. figure:: /docs/_static/map_FRIS_B13_line_source_small.png
+   :scale: 50 %
+   :alt: map of Filchner-Ronne Ice Shelf (FRIS) including ice core location B13
+
+   Map of Filchner-Ronne Ice Shelf (FRIS) including ice core location B13. 
+   Several stream lines as point or line sources from grd2stream and GMT mapping tools. 
+
+
+
 ToDo:
 -----
 - Use GMT-API for file io!
