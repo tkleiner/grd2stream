@@ -32,7 +32,7 @@ Install grd2stream e.g. by
 
 .. code-block:: bash
 
-  ./configure --prefix=$HOME ./configure NETCDF_INC=/opt/local/include NETCDF_LIB=/opt/local/lib
+  ./configure --prefix=$HOME NETCDF_INC=/opt/local/include NETCDF_LIB=/opt/local/lib
   make && make install
 
 Packaging (Maintainer only)
