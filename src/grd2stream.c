@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2019-10-09 12:47:30 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2020-04-08 14:52:01 (tkleiner)>"
 #endif
 
 /*
@@ -1035,6 +1035,13 @@ void usage(void)
           "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
           "  and generates polylines in multiple seqment mode each starting at x0,y0.\n"
           "  Output: 'x y dist' (3 cols) to stdout.\n",program_name);
+  fprintf(stderr,"\nNOTES:\n"
+          "  Units of x- and y- direction must match the spatial unit of the velocity\n"
+          "  to avoid unexpected results, e.g. m and m/a. \n"
+          "  If the velocity is given in e.g. m/a, m/d or m/s \n"
+          "  '-T 1' stops after one year, one day or 1 second respectively.\n"
+          "  Units are not converted in %s, thus keep the units consistent!\n", program_name);
+  
   fprintf(stderr,"\nEXAMPLE:\n"
           "  echo \"0 0\" | %s vx.grd vy.grd | psxy -m -R -J ... \n"
           "  \n",program_name);
