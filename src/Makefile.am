@@ -19,8 +19,8 @@ noinst_HEADERS = debug_printf.h grdio.h log.h getopt.h
 ##
 grd2stream_CFLAGS = 
 grd2stream_LDFLAGS = $(STATIC_LIBS)
-grd2stream_LDADD =   #-lnetcdf
-grd2stream_SOURCES  = grdio.c debug_printf.c log.c getopt.c grd2stream.c 
+grd2stream_LDADD =
+grd2stream_SOURCES = grdio.c debug_printf.c log.c getopt.c grd2stream.c 
 
 
 CLEANFILES = *.c~ *.h~
