@@ -57,6 +57,14 @@ AC_SUBST(STATIC_LIBS)
 AM_CONDITIONAL(ENABLE_STATIC, test "x${enable_static}" = "xyes")
 
 
+dnl this coul dbe removed later, if api calls are tested
+AC_ARG_ENABLE(gmt-api,
+        AC_HELP_STRING([--enable-gmt-api],
+        [try linking to gmt api@<:@default=no@:>@]),
+        [enable_gmt_api=$enableval],
+        [enable_gmt_api=no])
+
+
 
 # Checks for programs.
 AC_PROG_CC
@@ -111,6 +119,89 @@ AC_CHECK_HEADERS(netcdf.h, [],
 # Linker flags are prepended to LIBS if needed.
 AC_SEARCH_LIBS(nc_open, netcdf, [],
     AC_MSG_ERROR([netcdf library was not linked - defining LDFLAGS may help]))
+
+
+
+
+#-------------------------------------------------------------------------------#
+#  Find GMT5/6 library and header files                                         #
+#-------------------------------------------------------------------------------#
+
+
+AC_ARG_WITH([gmt-config],
+    AS_HELP_STRING([--without-gmt-config],
+        [do not use gmt-config to get GMT API configuration]),
+    [],
+    [with_gmt_config=yes])
+
+AS_IF([test "x$with_gmt_config" != xno],
+      [AC_CHECK_PROG(have_gmt_config, gmt-config, yes, no, [], [])]
+)
+
+AS_IF([test "x$have_gmt_config" == xyes],
+  [
+    # Prepend linker flags to LDFLAGS:
+    AC_MSG_CHECKING(GMT linker flags)
+    GMT_LIBS=`gmt-config --libs`
+    AC_MSG_RESULT($GMT_LIBS)
+    LDFLAGS="$GMT_LIBS $LDFLAGS"
+    # Prepend preprocessor and compiler flags to CPPFLAGS:
+    AC_MSG_CHECKING(GMT preprocessor and compiler flags)
+    GMT_CFLAGS=`gmt-config --cflags`
+    AC_MSG_RESULT($GMT_CFLAGS)
+    CPPFLAGS="$GMT_CFLAGS $CPPFLAGS"
+
+    
+    gmt_major_version=`gmt-config --version | \
+           sed 's/^\([[0-9]]*\).*/\1/'`
+    if test "x${gmt_major_version}" = "x" ; then
+       gmt_major_version=0
+    fi
+
+    gmt_minor_version=`gmt-config --version | \
+           sed 's/^\([[0-9]]*\)\.\{0,1\}\([[0-9]]*\).*/\2/'`
+    if test "x${gmt_minor_version}" = "x" ; then
+       gmt_minor_version=0
+    fi
+
+    gmt_micro_version=`gmt-config --version | \
+           sed 's/^\([[0-9]]*\)\.\{0,1\}\([[0-9]]*\)\.\{0,1\}\([[0-9]]*\).*/\3/'`
+    if test "x${gmt_micro_version}" = "x" ; then
+       gmt_micro_version=0
+    fi
+
+
+  ]
+)
+
+dnl # Check that gmt header files can be compiled:
+dnl AC_CHECK_HEADERS(gmt.h, [],
+dnl     AC_MSG_ERROR([gmt.h was not compiled - defining CPPFLAGS may help]))
+
+dnl # Check that gmt library can be found.
+dnl # Linker flags are prepended to LIBS if needed.
+dnl AC_SEARCH_LIBS(GMT_Create_Session, gmt, [],
+dnl     AC_MSG_ERROR([GMT library was not linked - defining LDFLAGS may help]))
+
+# Check that gmt header files can be compiled:
+AC_CHECK_HEADER([gmt.h],AC_DEFINE([HAVE_GMT_H],1,[Define to 1 if you have the <gmt.h> header file.]),enable_gmt=no)
+# Check that gmt library can be found.
+AC_SEARCH_LIBS(GMT_Create_Session, gmt, [],enable_gmt=no)
+
+if test "x${enable_gmt_api}" = "xyes"; then
+   AC_MSG_NOTICE([GMT support requested by user)])
+   if test "${enable_gmt}" = 'no'; then
+      AC_MSG_WARN([GMT support disabled (missing/unusable library or header file)])
+   else
+      if test "x${gmt_major_version}" = "x" ; then
+         AC_MSG_WARN([GMT support disabled (missing/unusable library or header file)])
+      else 
+         CPPFLAGS="$CPPFLAGS -DENABLE_GMT_API=${gmt_major_version}"
+      fi
+   fi                                    
+fi
+
+
 
 
 dnl

@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2020-04-08 14:52:01 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2020-04-14 09:53:56 (tkleiner)>"
 #endif
 
 /*
@@ -39,6 +39,12 @@
 #include "debug_printf.h"
 #include "log.h"
 
+
+#if ENABLE_GMT_API
+#define GRDREAD grdread_gmt
+#else
+#define GRDREAD grdread
+#endif
 
 #define MAXSTEPS 10000
 #define SUBSTEPS 2
@@ -335,10 +341,10 @@ int main( int argc, char** argv )
   }
 
   /* read the grid files */
-  err  = grdread (p_vx_name, &nx, &ny, &p_x, &p_y, &p_vx);
-  err += grdread (p_vy_name, &nx, &ny, &p_x, &p_y, &p_vy);
+  err  = GRDREAD (p_vx_name, &nx, &ny, &p_x, &p_y, &p_vx);
+  err += GRDREAD (p_vy_name, &nx, &ny, &p_x, &p_y, &p_vy);
   if ( M_opt > 0 && p_mask_name != NULL) {
-    err  += grdread (p_mask_name, &nxm, &nym, &p_xm, &p_ym, &p_mask);
+    err  += GRDREAD (p_mask_name, &nxm, &nym, &p_xm, &p_ym, &p_mask);
     xm_inc = p_xm[1]- p_xm[0];
     ym_inc = p_ym[1]- p_ym[0];
     if (verbose) {

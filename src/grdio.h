@@ -5,10 +5,18 @@
 
 
 /**
- *
+ * generic GMT grd file reader
  */
 int grdread (const char *filename, size_t *p_nx, size_t *p_ny, 
 		      double **pp_x, double **pp_y, double **pp_z);
+
+
+/**
+ * wrapper to call gmt api for netcdf/gdal/... file io
+ */
+int grdread_gmt (const char *filename, size_t *p_nx, size_t *p_ny, 
+		      double **pp_x, double **pp_y, double **pp_z);
+
 
 /**
  *
