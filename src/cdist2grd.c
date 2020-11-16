@@ -231,31 +231,25 @@ int main(int argc, char **argv) {
 void usage(void) {
   fprintf(stderr,
           "NAME:\n"
-          "  %s - generate stream lines based on GMT grid files\n",
+          "  %s - calculates a Cartesian distance grid to the point coordinates\n",
           program_name);
-#if 0
   fprintf(stderr,"USAGE:\n"
-          "  %s v_x.grd v_y.grd -f xyfile \n\n"
-          "  v_x.grd & v_y.grd   grid files with the 2 vector components\n"
-          "  xyfile              two column ASCII file containing (x0,y0)\n",program_name);
+          "  %s -Rw/e/s/n[r] -Idx/[dy] in.xy out.grd \n\n"
+          "  in.xy     two column ASCII file containing (x,y) coordinates\n"
+          "  out.grd   GMT grid file conatining the Cartesian distances to the points in in.xy\n"
+          ,program_name);
   fprintf(stderr,"\nOPTIONS:\n"
-          "  -b                  backward steps\n"
-          "  -d inc              stepsize\n"
-          /* "  -k                  select stepping method (default: RK4)\n" */
-          "  -l                  long output format: 'x y dist v_x v_y' (5 cols)\n"
-          "  -n maxsteps         maximum number of steps (default: %d)\n"
-          "  -V                  verbose output\n"
-          "  -r                  report why a streamline stopped to stderr (default: off)\n"
-          "  -v                  version\n"
-          "  -h                  help\n\n",MAXSTEPS);
-  fprintf(stderr,"\nDESCRIPTION:\n"
-          "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
-          "  and generates polylines in multiple seqment mode each starting at x0,y0.\n"
-          "  Output: 'x y dist' (3 cols) to stdout.\n",program_name);
+          "  -Rw/e/s/n  w, e, s, and n specify the Region of interest (GMT)\n"
+          "  -Idx/[dy]  dx [and optionally dy] is the grid spacing (GMT)\n"
+          "  -V         verbose output\n"
+          "  -v         version\n"
+          "  -h         help\n\n");
   fprintf(stderr,"\nEXAMPLE:\n"
-          "  echo \"0 0\" | %s vx.grd vy.grd | psxy -m -R -J ... \n"
+          "  inc=-I1000/1000\n"
+          "  reg=-R33000/565800/-1800000/-1023600\n"
+          "  blockmean -V $reg $inc RES_profiles.xy > _tmp.d\n"
+          "  %s -V $reg $inc _tmp.d $grd\n"
           "  \n",program_name);
-#endif
   exit(0);
 }
 
