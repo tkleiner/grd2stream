@@ -3,7 +3,7 @@
 ## Init
 ##
 ########################################################################
-AC_INIT([grd2stream], [0.2.8], [tkleiner@awi.de])
+AC_INIT([grd2stream],[0.2.8],[tkleiner@awi.de])
 AC_CONFIG_SRCDIR([configure.ac])
 # Put helper scripts here to reduce top level clutter
 AC_CONFIG_AUX_DIR([admin])
@@ -36,8 +36,7 @@ AC_MSG_RESULT([$prefix])
 dnl 
 dnl What should I build?
 dnl 
-AC_ARG_ENABLE(debug, AC_HELP_STRING([--enable-debug],
-    [Compile in debug mode @<:@default=no@:>@]),
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[Compile in debug mode @<:@default=no@:>@]),
     enable_debug=$enableval,
     enable_debug=no)
 AM_CONDITIONAL(ENABLE_DEBUG, test "x${enable_debug}" == "xyes" )
@@ -46,8 +45,7 @@ dnl
 dnl Static libs
 dnl 
 AC_ARG_ENABLE(static,
-        AC_HELP_STRING([--enable-static],
-        [force static linking @<:@default=no@:>@]),
+        AS_HELP_STRING([--enable-static],[force static linking @<:@default=no@:>@]),
         [enable_static=$enableval],
         [enable_static=no])
 if test "x${enable_static}" = "xyes"; then
@@ -59,8 +57,7 @@ AM_CONDITIONAL(ENABLE_STATIC, test "x${enable_static}" = "xyes")
 
 dnl this coul dbe removed later, if api calls are tested
 AC_ARG_ENABLE(gmt-api,
-        AC_HELP_STRING([--enable-gmt-api],
-        [try linking to gmt api@<:@default=no@:>@]),
+        AS_HELP_STRING([--enable-gmt-api],[try linking to gmt api@<:@default=no@:>@]),
         [enable_gmt_api=$enableval],
         [enable_gmt_api=no])
 
@@ -77,7 +74,6 @@ AC_CHECK_LIB([m], [sqrt])
 dnl AC_CHECK_LIB([netcdf], [nc_open])
 
 # Checks for header files.
-AC_HEADER_STDC
 dnl AC_CHECK_HEADERS([stdlib.h string.h getopt.h netcdf.h])
 AC_CHECK_HEADERS([stdlib.h string.h getopt.h])
 
