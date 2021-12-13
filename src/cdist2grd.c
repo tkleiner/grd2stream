@@ -200,10 +200,10 @@ int main(int argc, char **argv) {
      ******************************************************************/
 
     for (j = 0; j < ny; j++) {
-      ydist = abs(ypos - p_y[j]);
+      ydist = fabs(ypos - p_y[j]);
 
       for (i = 0; i < nx; i++) {
-        xdist = abs(xpos - p_x[i]);
+        xdist = fabs(xpos - p_x[i]);
         dist = sqrt(xdist * xdist + ydist * ydist);
         k = IJ2IND(i, j, nx);
         p_grd[k] = MIN(p_grd[k], dist);
