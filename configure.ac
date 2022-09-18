@@ -55,7 +55,7 @@ AC_SUBST(STATIC_LIBS)
 AM_CONDITIONAL(ENABLE_STATIC, test "x${enable_static}" = "xyes")
 
 
-dnl this coul dbe removed later, if api calls are tested
+dnl this could dbe removed later, if api calls are tested
 AC_ARG_ENABLE(gmt-api,
         AS_HELP_STRING([--enable-gmt-api],[try linking to gmt api@<:@default=no@:>@]),
         [enable_gmt_api=$enableval],
@@ -122,8 +122,6 @@ AC_SEARCH_LIBS(nc_open, netcdf, [],
 #-------------------------------------------------------------------------------#
 #  Find GMT5/6 library and header files                                         #
 #-------------------------------------------------------------------------------#
-
-
 AC_ARG_WITH([gmt-config],
     AS_HELP_STRING([--without-gmt-config],
         [do not use gmt-config to get GMT API configuration]),
