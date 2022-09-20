@@ -222,6 +222,27 @@ static void reverse(double arr[], int n) {
   }
 }
 
+/* GMT6 */
+//struct GMT_GRID_HEADER {
+//    uint32_t n_columns;                     /* Number of columns */
+//    uint32_t n_rows;                        /* Number of rows */
+//    uint32_t registration;                  /* GMT_GRID_NODE_REG (0) for node grids,
+//                                               GMT_GRID_PIXEL_REG (1) for pixel grids */
+//    double wesn[4];                         /* Min/max x and y coordinates */
+//    double z_min;                           /* Minimum z value */
+//    double z_max;                           /* Maximum z value */
+//    double inc[2];                          /* The x and y increments */
+//    double z_scale_factor;                  /* Grid values must be multiplied by this factor */
+//    double z_add_offset;                    /* After scaling, add this */
+//    char   x_units[GMT_GRID_UNIT_LEN80];    /* Units in x-direction */
+//    char   y_units[GMT_GRID_UNIT_LEN80];    /* Units in y-direction */
+//    char   z_units[GMT_GRID_UNIT_LEN80];    /* Grid value units */
+//    char   title[GMT_GRID_TITLE_LEN80];     /* Name of data set */
+//    char   command[GMT_GRID_COMMAND_LEN320];/* Name of generating command */
+//    char   remark[GMT_GRID_REMARK_LEN160];  /* Comments regarding this data set */
+//};
+
+
 int grdread_gmt(const char *filename, size_t *p_nx, size_t *p_ny, double **pp_x,
                 double **pp_y, double **pp_z) {
 
@@ -346,29 +367,3 @@ int grdread_gmt(const char *filename, size_t *p_nx, size_t *p_ny, double **pp_x,
 #endif
 
 } /* read_netCDF_file */
-
-int grdformats(void) {
-#if ENABLE_GMT_API
-  int i;
-  struct GMTAPI_CTRL *API = NULL;
-  char **grdformats;
-
-  if ((API = GMT_Create_Session("grd2stream session", 2U, 0U, NULL)) == NULL) {
-    return EXIT_FAILURE;
-  }
-
-#if 0
-  /* see gmt_customio.c , grdconvert.c */
-  grdformats = gmt_grdformats_sorted(API->GMT);
-  for (i = 1; i < GMT_N_GRD_FORMATS; ++i) {
-    fprintf(stderr, "%d: %s\n", i, grdformats[i]);
-  }
-#endif
-
-  /* Destroy the GMT session */
-  GMT_Destroy_Session(API);
-  return EXIT_SUCCESS;
-#else
-  return EXIT_FAILURE;
-#endif
-}

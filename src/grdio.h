@@ -29,10 +29,5 @@ int grdwrite (const char *filename, const size_t nx, size_t ny,
 int grdwrite (const char *filename, const size_t nx, size_t ny, 
               const double *p_x, const double *p_y, const void *const p_z, const nc_type vtype);
 
-/**
- *
- */
-int grdformats(void);
-
 
 #endif
