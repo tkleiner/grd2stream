@@ -26,12 +26,12 @@ int parse_R_option(char *item, double *w, double *e, double *s, double *n)
 	if (item[0] == 'g' || item[0] == 'd') {
 		if (item[0] == 'g') {	/* -Rg is shorthand for -R0/360/-90/90 */
 			/*g_flag = 1; */
-			fprintf(stderr, "Error: -Rg shorthand is not suported");
+			fprintf(stderr, "Error: -Rg shorthand is not supported");
 			abort();
 
 		} else {	/* -Rd is horthand for -R-180/+180/-90/90 */
 			/*      Rd_flag = 1;  *//* global flag */
-			fprintf(stderr, "Error: -Rd shorthand is not suported");
+			fprintf(stderr, "Error: -Rd shorthand is not supported");
 			abort();
 		}
 		*w = -180.0, *e = 180.0;
