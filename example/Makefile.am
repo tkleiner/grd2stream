@@ -1,1 +1,1 @@
-EXTRA_DIST = LakeColor.cpt example.gmt validation.gmt # vectorplot.nb
+EXTRA_DIST = LakeColor.cpt example.gmt4 validation.gmt4 # vectorplot.nb

@@ -4,7 +4,7 @@
 ##
 set -efxu 
 
-name=$(basename $0 .gmt)
+name=$(basename $0 .gmt4)
 eps=${name}.eps
 tmp_dir=_tmp_$name
 test -d $tmp_dir || mkdir $tmp_dir
