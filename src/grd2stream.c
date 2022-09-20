@@ -38,6 +38,7 @@
 #include "log.h"
 
 #if ENABLE_GMT_API
+#include <gmt.h>
 #define GRDREAD grdread_gmt
 #else
 #define GRDREAD grdread
@@ -1082,7 +1083,16 @@ void usage(void) {
  *
  */
 void version(void) {
-  fprintf(stderr, "This is %s version %s (%s).\n", PACKAGE_NAME,
+    unsigned int gmt_major, gmt_minor, gmt_patch;
+
+    fprintf(stderr, "This is %s version %s (%s)", PACKAGE_NAME,
           PACKAGE_VERSION, __DATE__);
-  exit(0);
+
+#if ENABLE_GMT_API
+    (void) GMT_Get_Version (NULL, &gmt_major, &gmt_minor, &gmt_patch);
+    fprintf(stderr, ", GMT API version %u.%u.%u", gmt_major, gmt_minor, gmt_patch);
+#endif
+    fprintf(stderr, ".\n");
+
+    exit(0);
 }
