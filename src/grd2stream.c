@@ -923,15 +923,15 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   i10 = (iyel1) * (nx) + ixel;
   i11 = (iyel1) * (nx) + ixel1;
 
-  debug_printf(DEBUG_INFO, "vx[i00] =  %.3f\n", p_vx[i00]);
-  debug_printf(DEBUG_INFO, "vx[i10] =  %.3f\n", p_vx[i10]);
-  debug_printf(DEBUG_INFO, "vx[i01] =  %.3f\n", p_vx[i01]);
-  debug_printf(DEBUG_INFO, "vx[i11] =  %.3f\n", p_vx[i11]);
+  debug_printf(DEBUG_INFO, "vx[i00] =  %.3g\n", p_vx[i00]);
+  debug_printf(DEBUG_INFO, "vx[i10] =  %.3g\n", p_vx[i10]);
+  debug_printf(DEBUG_INFO, "vx[i01] =  %.3g\n", p_vx[i01]);
+  debug_printf(DEBUG_INFO, "vx[i11] =  %.3g\n", p_vx[i11]);
 
-  debug_printf(DEBUG_INFO, "vy[i00] =  %.3f\n", p_vy[i00]);
-  debug_printf(DEBUG_INFO, "vy[i10] =  %.3f\n", p_vy[i10]);
-  debug_printf(DEBUG_INFO, "vy[i01] =  %.3f\n", p_vy[i01]);
-  debug_printf(DEBUG_INFO, "vy[i11] =  %.3f\n", p_vy[i11]);
+  debug_printf(DEBUG_INFO, "vy[i00] =  %.3g\n", p_vy[i00]);
+  debug_printf(DEBUG_INFO, "vy[i10] =  %.3g\n", p_vy[i10]);
+  debug_printf(DEBUG_INFO, "vy[i01] =  %.3g\n", p_vy[i01]);
+  debug_printf(DEBUG_INFO, "vy[i11] =  %.3g\n", p_vy[i11]);
 
   p1 = p_vx[i00] + (xi - p_x[ixel]) * (p_vx[i10] - p_vx[i00]) / (p_x[ixel + 1] - p_x[ixel]);
 
