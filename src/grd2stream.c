@@ -55,9 +55,8 @@
 /**
  *
  */
-static int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx,
-                   double *p_vy, double xi, double yi, double *p_vxi,
-                   double *p_vyi);
+static int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double *p_vy, double xi, double yi,
+                   double *p_vxi, double *p_vyi);
 
 /**
  * returns a value i such that x is between xx[i] and xx[i+1]
@@ -120,22 +119,15 @@ void log_break_dy(double y, double x0, double y0) {
   }
 }
 
-void log_break_stepsize(double stpsz, double xinc, double yinc, double x0,
-                        double y0) {
+void log_break_stepsize(double stpsz, double xinc, double yinc, double x0, double y0) {
   if (log_breaks) {
-    fprintf(
-        stderr,
-        "Stop: Stepsize to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n",
-        stpsz, xinc, yinc, x0, y0);
+    fprintf(stderr, "Stop: Stepsize to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n", stpsz, xinc, yinc, x0, y0);
   }
 }
 
 void log_break_maxiter(double x0, double y0) {
   if (log_breaks) {
-    fprintf(
-        stderr,
-        "Stop: Maximum number of iterations reached for seed (%.3f, %.3f)\n",
-        x0, y0);
+    fprintf(stderr, "Stop: Maximum number of iterations reached for seed (%.3f, %.3f)\n", x0, y0);
   }
 }
 
@@ -150,10 +142,8 @@ void log_break_maxtime(double x0, double y0, unsigned long iter) {
 
 void log_break_delta(double x0, double y0, unsigned long iter, double delta) {
   if (log_breaks) {
-    fprintf(
-        stderr,
-        "Stop: Invalid delta = %f for seed (%.3f, %.3f) after %u itterations\n",
-        delta, x0, y0, (unsigned int)iter);
+    fprintf(stderr, "Stop: Invalid delta = %f for seed (%.3f, %.3f) after %u itterations\n", delta, x0, y0,
+            (unsigned int)iter);
   }
 }
 
@@ -179,11 +169,11 @@ int main(int argc, char **argv) {
   double dx = 0.0, dy = 0.0; /* local error */
   double lim = 0.0;
 
-  double itime;   /* stream-line integration time in time units given by thge
-                     velocity field */
-  double maxtime; /* same units as itime, less equal zero indicates an error */
+  double itime;                                     /* stream-line integration time in time units given by thge
+                                                       velocity field */
+  double maxtime;                                   /* same units as itime, less equal zero indicates an error */
   double dist, dout, delta, delta_initial = 1000.0; /* unit m ???*/
-  double dir = 1.0; /* direction (1.. forward, -1..backward) */
+  double dir = 1.0;                                 /* direction (1.. forward, -1..backward) */
   unsigned int freq = 1;
 
   double *p_x = NULL;
@@ -242,79 +232,79 @@ int main(int argc, char **argv) {
   /* parse commandline args */
   while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:")) != -1)
     switch (oc) {
-    case 't':
-      /* report time */
-      t_opt = 1;
-      break;
-    case 'T':
-      /* maximum integration time */
-      T_opt = 1;
-      maxtime = (double)atof(optarg);
-      break;
-    case 'b':
-      /* go backward */
-      b_opt = 1;
-      break;
-    case 'l':
-      /* long output */
-      l_opt = 1;
-      break;
-    case 'L':
-      /* long input */
-      L_opt = 1;
-      break;
-    case 'D':
-      /* check spacing */
-      D_opt = 1;
-      break;
-    case 'd':
-      /* output step size */
-      d_opt = 1;
-      dout = (double)atof(optarg);
-      break;
-    case 'h':
-      /* help */
-      usage();
-      break;
-    case 'v':
-      /* version */
-      version();
-      break;
-    case 'k':
-      /* stepping */
-      k_opt = atoi(optarg);
-      break;
-    case 'n':
-      /* maximum number of steps allowed */
-      maxiter = (unsigned int)atoi(optarg);
-      break;
-    case 'f':
-      /* read initial points from file */
-      p_file_name = (optarg);
-      break;
-    case 'M':
-      /* read mask */
-      M_opt = 1;
-      p_mask_name = (optarg);
-      break;
-    case 'B':
-      /* read mask */
-      B_opt = 1;
-      p_blank_name = (optarg);
-      break;
-    case 'V':
-      /* verbose opttion */
-      verbose++;
-      break;
-    case 'r':
-      /* verbose opttion */
-      log_breaks = 1;
-      break;
-    case '?':
-      fprintf(stderr, "Unknown option `-%c'.\n", optopt);
-      return 1;
-    default:
-      abort();
+      case 't':
+        /* report time */
+        t_opt = 1;
+        break;
+      case 'T':
+        /* maximum integration time */
+        T_opt = 1;
+        maxtime = (double)atof(optarg);
+        break;
+      case 'b':
+        /* go backward */
+        b_opt = 1;
+        break;
+      case 'l':
+        /* long output */
+        l_opt = 1;
+        break;
+      case 'L':
+        /* long input */
+        L_opt = 1;
+        break;
+      case 'D':
+        /* check spacing */
+        D_opt = 1;
+        break;
+      case 'd':
+        /* output step size */
+        d_opt = 1;
+        dout = (double)atof(optarg);
+        break;
+      case 'h':
+        /* help */
+        usage();
+        break;
+      case 'v':
+        /* version */
+        version();
+        break;
+      case 'k':
+        /* stepping */
+        k_opt = atoi(optarg);
+        break;
+      case 'n':
+        /* maximum number of steps allowed */
+        maxiter = (unsigned int)atoi(optarg);
+        break;
+      case 'f':
+        /* read initial points from file */
+        p_file_name = (optarg);
+        break;
+      case 'M':
+        /* read mask */
+        M_opt = 1;
+        p_mask_name = (optarg);
+        break;
+      case 'B':
+        /* read mask */
+        B_opt = 1;
+        p_blank_name = (optarg);
+        break;
+      case 'V':
+        /* verbose opttion */
+        verbose++;
+        break;
+      case 'r':
+        /* verbose opttion */
+        log_breaks = 1;
+        break;
+      case '?':
+        fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+        return 1;
+      default:
+        abort();
     }
 
   if ((argc - optind) != 2)
@@ -350,10 +340,8 @@ int main(int argc, char **argv) {
     ym_inc = p_ym[1] - p_ym[0];
     if (verbose) {
       fprintf(stderr, "Input mask:\n");
-      fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xm[0],
-              p_xm[nxm - 1], xm_inc, nxm);
-      fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_ym[0],
-              p_ym[nym - 1], ym_inc, nym);
+      fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xm[0], p_xm[nxm - 1], xm_inc, nxm);
+      fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_ym[0], p_ym[nym - 1], ym_inc, nym);
     }
   }
   if (err != 0) {
@@ -416,26 +404,20 @@ int main(int argc, char **argv) {
 
   if (verbose) {
     fprintf(stderr, "Input:\n");
-    fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", xmin, xmax,
-            x_inc, nx);
-    fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", ymin, ymax,
-            y_inc, ny);
-    fprintf(stderr, "d_out: %.3f d_inc: %.3f RK: %d freq: %u\n", dout, delta,
-            k_opt, freq);
+    fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", xmin, xmax, x_inc, nx);
+    fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", ymin, ymax, y_inc, ny);
+    fprintf(stderr, "d_out: %.3f d_inc: %.3f RK: %d freq: %u\n", dout, delta, k_opt, freq);
     fprintf(stderr, "verbose: %u\n", verbose);
   }
 
   if (verbose > 1) {
     fprintf(stderr, "Coarse grid:\n");
-    fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xc[0],
-            p_xc[nbx - 1], xb_inc, nbx);
-    fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_yc[0],
-            p_yc[nby - 1], yb_inc, nby);
+    fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xc[0], p_xc[nbx - 1], xb_inc, nbx);
+    fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_yc[0], p_yc[nby - 1], yb_inc, nby);
   }
 
   if ((delta_initial > x_inc) || (delta_initial > y_inc)) {
-    fprintf(stderr, "WARN: Stepsize to large: %.3f > (%.3f, %.3f)\n",
-            delta_initial, x_inc, y_inc);
+    fprintf(stderr, "WARN: Stepsize to large: %.3f > (%.3f, %.3f)\n", delta_initial, x_inc, y_inc);
   }
 
   if (p_file_name == NULL) { /* Just read standard input */
@@ -453,7 +435,6 @@ int main(int argc, char **argv) {
   }
 
   while (!feof(fp) && (fgets(line, BUFSIZ, fp) != 0)) {
-
     nlines++;
     if (verbose) {
       fprintf(stderr, "Processing input line: %u ...\n", nlines);
@@ -462,9 +443,7 @@ int main(int argc, char **argv) {
     if (line[0] == '#' || line[0] == '>' || line[0] == '\n') {
       /* if(verbose) fprintf(stderr,"skip header\n"); */
     } else {
-
       if (L_opt) {
-
         if (3 != sscanf(line, "%lf %lf %lf", &x0, &y0, &dir)) {
           fprintf(stderr,
                   "ERROR: Mismatch between actual and expected fields near "
@@ -480,7 +459,6 @@ int main(int argc, char **argv) {
         }
 
       } else {
-
         if (2 != sscanf(line, "%lf %lf", &x0, &y0)) {
           fprintf(stderr,
                   "ERROR: Mismatch between actual and expected fields near "
@@ -500,8 +478,7 @@ int main(int argc, char **argv) {
        *
        ******************************************************************/
 
-      if ((x0 > p_x[nx - 1]) || (y0 > p_y[ny - 1]) || (x0 < p_x[0]) ||
-          (y0 < p_y[0])) {
+      if ((x0 > p_x[nx - 1]) || (y0 > p_y[ny - 1]) || (x0 < p_x[0]) || (y0 < p_y[0])) {
         if (log_breaks) {
           fprintf(stderr,
                   "Stop: Seed (%.3f, %.3f) is outside valid region "
@@ -527,19 +504,17 @@ int main(int argc, char **argv) {
        * Points at current streamline
        */
       for (iter = 0; iter < maxiter; iter++) {
-
         if (iter == 0) {
           dx0 = dx1 = dx2 = dx3 = 0.0;
           dy0 = dy1 = dy2 = dy3 = 0.0;
         }
 
         /*
-         * STEP 0 (get inital velocity data at requested point)
+         * STEP 0 (get initial velocity data at requested point)
          */
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi);
         if (verbose > 1) {
-          fprintf(stderr, "# x = %.3f, y = %.3f, vx = %.3f, vy = %.3f\n", xi,
-                  yi, vxi, vyi);
+          fprintf(stderr, "# x = %.3f, y = %.3f, vx = %.3f, vy = %.3f\n", xi, yi, vxi, vyi);
         }
         /* check if mask reached */
         if (M_opt > 0) {
@@ -566,8 +541,7 @@ int main(int argc, char **argv) {
           if (l_opt) {
             printf("%.3f %.3f %.3f %.3f %.3f\n", xi, yi, dist, vxi, vyi);
           } else if (t_opt) {
-            printf("%.3f %.3f %.3f %.3f %.3f %.3f\n", xi, yi, dist, vxi, vyi,
-                   itime);
+            printf("%.3f %.3f %.3f %.3f %.3f %.3f\n", xi, yi, dist, vxi, vyi, itime);
           } else if (M_opt > 0) {
             printf("%.3f %.3f %.3f %.3f\n", xi, yi, dist, mask_val);
           } else {
@@ -890,9 +864,8 @@ int main(int argc, char **argv) {
 } /* main */
 
 /*****************************************************************************/
-int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx,
-            double *p_vy, double xi, double yi, double *p_vxi, double *p_vyi) {
-
+int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double *p_vy, double xi, double yi,
+            double *p_vxi, double *p_vyi) {
   size_t ixel = 0, iyel = 0;   /* where we are */
   size_t ixel1 = 0, iyel1 = 0; /* the next */
   size_t i00, i01, i10, i11;
@@ -902,12 +875,10 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx,
   size_t ixel_dbg = 0;
 #endif
 
-  debug_printf(DEBUG_INFO,
-               "search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n", xi,
-               0, p_x[0], nx - 1, p_x[nx - 1]);
-  debug_printf(DEBUG_INFO,
-               "search yi = %.3f in y[%lu] = %.3f < yi < y[%lu] = %.3f\n", yi,
-               0, p_y[0], ny - 1, p_y[ny - 1]);
+  debug_printf(DEBUG_INFO, "search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n", xi, 0, p_x[0], nx - 1,
+               p_x[nx - 1]);
+  debug_printf(DEBUG_INFO, "search yi = %.3f in y[%lu] = %.3f < yi < y[%lu] = %.3f\n", yi, 0, p_y[0], ny - 1,
+               p_y[ny - 1]);
 
   if (xi >= p_x[nx - 1]) {
     /* right margin */
@@ -919,12 +890,10 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx,
     locate(p_x, nx, xi, &ixel);
 #if TEST_LOCATE
     locate_slow(p_x, nx, xi, &ixel_dbg);
-    fprintf(stderr, "x[%lu] = %.3f  <=> x[%lu] = %.3f\n", ixel, p_x[ixel],
-            ixel_dbg, p_x[ixel_dbg]);
+    fprintf(stderr, "x[%lu] = %.3f  <=> x[%lu] = %.3f\n", ixel, p_x[ixel], ixel_dbg, p_x[ixel_dbg]);
 #endif
   }
-  debug_printf(DEBUG_INFO, "found xi = %.3f -> x[%lu] = %.3f\n", xi, ixel,
-               p_x[ixel]);
+  debug_printf(DEBUG_INFO, "found xi = %.3f -> x[%lu] = %.3f\n", xi, ixel, p_x[ixel]);
 
   if (yi >= p_y[ny - 1]) {
     /* top margin */
@@ -935,8 +904,7 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx,
   } else {
     locate(p_y, ny, yi, &iyel);
   }
-  debug_printf(DEBUG_INFO, "found yi = %.3f -> y[%lu] = %.3f\n", yi, iyel,
-               p_y[iyel]);
+  debug_printf(DEBUG_INFO, "found yi = %.3f -> y[%lu] = %.3f\n", yi, iyel, p_y[iyel]);
 
   ixel1 = MIN(ixel + 1, nx - 1);
   iyel1 = MIN(iyel + 1, ny - 1);
@@ -956,19 +924,15 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx,
   debug_printf(DEBUG_INFO, "vy[i01] =  %.3f\n", p_vy[i01]);
   debug_printf(DEBUG_INFO, "vy[i11] =  %.3f\n", p_vy[i11]);
 
-  p1 = p_vx[i00] +
-       (xi - p_x[ixel]) * (p_vx[i10] - p_vx[i00]) / (p_x[ixel + 1] - p_x[ixel]);
+  p1 = p_vx[i00] + (xi - p_x[ixel]) * (p_vx[i10] - p_vx[i00]) / (p_x[ixel + 1] - p_x[ixel]);
 
-  q1 = p_vx[i01] +
-       (xi - p_x[ixel]) * (p_vx[i11] - p_vx[i01]) / (p_x[ixel + 1] - p_x[ixel]);
+  q1 = p_vx[i01] + (xi - p_x[ixel]) * (p_vx[i11] - p_vx[i01]) / (p_x[ixel + 1] - p_x[ixel]);
 
   (*p_vxi) = p1 + (yi - p_y[iyel]) * (q1 - p1) / (p_y[iyel + 1] - p_y[iyel]);
 
-  p2 = p_vy[i00] +
-       (xi - p_x[ixel]) * (p_vy[i10] - p_vy[i00]) / (p_x[ixel + 1] - p_x[ixel]);
+  p2 = p_vy[i00] + (xi - p_x[ixel]) * (p_vy[i10] - p_vy[i00]) / (p_x[ixel + 1] - p_x[ixel]);
 
-  q2 = p_vy[i01] +
-       (xi - p_x[ixel]) * (p_vy[i11] - p_vy[i01]) / (p_x[ixel + 1] - p_x[ixel]);
+  q2 = p_vy[i01] + (xi - p_x[ixel]) * (p_vy[i11] - p_vy[i01]) / (p_x[ixel + 1] - p_x[ixel]);
 
   (*p_vyi) = p2 + (yi - p_y[iyel]) * (q2 - p2) / (p_y[iyel + 1] - p_y[iyel]);
 
@@ -1034,27 +998,27 @@ void usage(void) {
           "  xyfile              two column ASCII file containing (x0,y0)\n",
           program_name);
   fprintf(stderr,
-      "\nOPTIONS:\n"
-      "  -b                  backward steps\n"
-      "  -d inc              stepsize\n"
-      /* "  -k                  select stepping method (default: RK4)\n" */
-      "  -l                  output format: 'x y dist v_x v_y' (5 cols)\n"
-      "  -t                  output format: 'x y dist v_x v_y time' (6 cols)\n"
-      "  -T maxtime          maximum integration time (default: none)\n"
-      "  -n maxsteps         maximum number of steps (default: %d)\n"
-      "  -V                  verbose output\n"
-      "  -r                  report why a streamline stopped to stderr "
-      "(default: off)\n"
-      "  -v                  version\n"
-      "  -h                  help\n\n",
-      MAXSTEPS);
+          "\nOPTIONS:\n"
+          "  -b                  backward steps\n"
+          "  -d inc              stepsize\n"
+          /* "  -k                  select stepping method (default: RK4)\n" */
+          "  -l                  output format: 'x y dist v_x v_y' (5 cols)\n"
+          "  -t                  output format: 'x y dist v_x v_y time' (6 cols)\n"
+          "  -T maxtime          maximum integration time (default: none)\n"
+          "  -n maxsteps         maximum number of steps (default: %d)\n"
+          "  -V                  verbose output\n"
+          "  -r                  report why a streamline stopped to stderr "
+          "(default: off)\n"
+          "  -v                  version\n"
+          "  -h                  help\n\n",
+          MAXSTEPS);
   fprintf(stderr,
-      "\nDESCRIPTION:\n"
-      "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
-      "  and generates polylines in multiple seqment mode each starting at "
-      "x0,y0.\n"
-      "  Output: 'x y dist' (3 cols) to stdout.\n",
-      program_name);
+          "\nDESCRIPTION:\n"
+          "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
+          "  and generates polylines in multiple seqment mode each starting at "
+          "x0,y0.\n"
+          "  Output: 'x y dist' (3 cols) to stdout.\n",
+          program_name);
   fprintf(stderr,
           "\nNOTES:\n"
           "  Units of x- and y- direction must match the spatial unit of the "
@@ -1065,9 +1029,10 @@ void usage(void) {
           "  Units are not converted in %s, thus keep the units consistent!\n",
           program_name);
 #if ENABLE_GMT_API
-    fprintf(stderr,
+  fprintf(stderr,
           "\n"
-          "  Use 'gmt grdconvert' without further arguments to retrieve a list of supported grid formats\n");
+          "  Use 'gmt grdconvert' without further arguments to "
+          "retrieve a list of supported grid formats\n");
 #endif
 
   fprintf(stderr,
@@ -1083,16 +1048,15 @@ void usage(void) {
  *
  */
 void version(void) {
-    unsigned int gmt_major, gmt_minor, gmt_patch;
+  unsigned int gmt_major, gmt_minor, gmt_patch;
 
-    fprintf(stderr, "This is %s version %s (%s)", PACKAGE_NAME,
-          PACKAGE_VERSION, __DATE__);
+  fprintf(stderr, "This is %s version %s (%s)", PACKAGE_NAME, PACKAGE_VERSION, __DATE__);
 
 #if ENABLE_GMT_API
-    (void) GMT_Get_Version (NULL, &gmt_major, &gmt_minor, &gmt_patch);
-    fprintf(stderr, ", GMT API version %u.%u.%u", gmt_major, gmt_minor, gmt_patch);
+  (void)GMT_Get_Version(NULL, &gmt_major, &gmt_minor, &gmt_patch);
+  fprintf(stderr, ", GMT API version %u.%u.%u", gmt_major, gmt_minor, gmt_patch);
 #endif
-    fprintf(stderr, ".\n");
+  fprintf(stderr, ".\n");
 
-    exit(0);
+  exit(0);
 }
