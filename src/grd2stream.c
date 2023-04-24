@@ -488,8 +488,17 @@ int main(int argc, char **argv) {
         continue; /* continue with next point in file */
       }
 
+      /* insert ogr2ogr header: https://docs.generic-mapping-tools.org/6.3/cookbook/ogrgmt-format.html */
+      if (npoly==0){
+          printf("# @VGMT1.0 @GLINESTRING \n"
+                 "# @Nname|id\n"
+                 "# @Tstring|integer\n"
+                 "# FEATURE_DATA\n");
+      }
+
       npoly++;
-      printf("> streamline: %u\n", npoly);
+      printf(">\n# streamline|%u\n", npoly);
+
       dist = 0.0;
       itime = 0.0;
       delta = delta_initial; /* reset delta for next stream line, important for
