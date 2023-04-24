@@ -300,8 +300,8 @@ int grdread_gmt(const char *filename, size_t *p_nx, size_t *p_ny, double **pp_x,
   nx = G->header->nx;
   ny = G->header->ny;
 #elif ENABLE_GMT_API == 6
-  nx = G->header->n_rows;
-  ny = G->header->n_columns;
+  nx = G->header->n_columns;
+  ny = G->header->n_rows;
 #endif
   debug_printf(DEBUG_INFO, "%s:  zmin: %g\n", __FILE__, G->header->z_min);
   debug_printf(DEBUG_INFO, "%s:  zmax: %g\n", __FILE__, G->header->z_max);
@@ -347,13 +347,13 @@ int grdread_gmt(const char *filename, size_t *p_nx, size_t *p_ny, double **pp_x,
   /* x and y are of type double in GMT6 */
   GMT_memcpy((*pp_x), G->x, nx, double);
   GMT_memcpy((*pp_y), G->y, ny, double);
-  reverse((*pp_y), ny); /* needed because y-axis is inverted*/
+  reverse((*pp_y), ny); /* needed because y-axis is inverted */
 
   /* copy 1D GMT array data into 2D  data */
   for (int i = 0; i < nx; ++i) {
     for (int j = 0; j < ny; ++j) {
-      ij = (nx - i - 1) * ny + j;
-      node = GMT_Get_Index(API, G->header, i, j);
+      ij = (ny - j - 1) * nx + i;
+      node = GMT_Get_Index(API, G->header, j, i); // row,col
       (*pp_z)[ij] = (double)G->data[node]; /* data is float or double  in gmt */
     }
   }
