@@ -69,19 +69,14 @@ AM_PROG_CC_C_O
 AC_PROG_RANLIB
 
 # Checks for libraries.
-#netcdf first!
 AC_CHECK_LIB([m], [sqrt])
-dnl AC_CHECK_LIB([netcdf], [nc_open])
 
 # Checks for header files.
-dnl AC_CHECK_HEADERS([stdlib.h string.h getopt.h netcdf.h])
 AC_CHECK_HEADERS([stdlib.h string.h getopt.h])
-
 
 #-------------------------------------------------------------------------------#
 #  Find NetCDF library and header files                                         #
 #-------------------------------------------------------------------------------#
-
 AC_ARG_WITH([nc-config],
     AS_HELP_STRING([--without-nc-config],
         [do not use nc-config to get netcdf configuration]),
@@ -168,17 +163,9 @@ AS_IF([test "x$have_gmt_config" == xyes],
   ]
 )
 
-dnl # Check that gmt header files can be compiled:
-dnl AC_CHECK_HEADERS(gmt.h, [],
-dnl     AC_MSG_ERROR([gmt.h was not compiled - defining CPPFLAGS may help]))
-
-dnl # Check that gmt library can be found.
-dnl # Linker flags are prepended to LIBS if needed.
-dnl AC_SEARCH_LIBS(GMT_Create_Session, gmt, [],
-dnl     AC_MSG_ERROR([GMT library was not linked - defining LDFLAGS may help]))
-
 # Check that gmt header files can be compiled:
 AC_CHECK_HEADER([gmt.h],AC_DEFINE([HAVE_GMT_H],1,[Define to 1 if you have the <gmt.h> header file.]),enable_gmt=no)
+
 # Check that gmt library can be found.
 AC_SEARCH_LIBS(GMT_Create_Session, gmt, [],enable_gmt=no)
 
@@ -195,6 +182,11 @@ if test "x${enable_gmt_api}" = "xyes"; then
    fi                                    
 fi
 
+dnl
+dnl check for netcdf only if we don't use the gmt api
+dnl
+
+
 
 
 
@@ -204,10 +196,9 @@ dnl
 
 AC_CONFIG_FILES([Makefile \
         m4/Makefile \
-			  src/Makefile \
-			  example/Makefile \
-			   ])
-dnl data/Makefile
+	    src/Makefile \
+		example/Makefile \
+		])
 AC_OUTPUT
 
 
