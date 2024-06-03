@@ -523,7 +523,7 @@ int main(int argc, char **argv) {
          */
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi);
         if (verbose > 1) {
-          fprintf(stderr, "# x = %.3f, y = %.3f, vx = %.3f, vy = %.3f\n", xi, yi, vxi, vyi);
+          fprintf(stderr, "# x = %.3f, y = %.3f, vx = %.3e, vy = %.3e\n", xi, yi, vxi, vyi);
         }
         /* check if mask reached */
         if (M_opt > 0) {
@@ -548,9 +548,9 @@ int main(int argc, char **argv) {
         /* this is the output */
         if (!(iter % freq)) {
           if (l_opt) {
-            printf("%.3f %.3f %.3f %.3f %.3f\n", xi, yi, dist, vxi, vyi);
+            printf("%.3f %.3f %.3f %.3g %.3g\n", xi, yi, dist, vxi, vyi);
           } else if (t_opt) {
-            printf("%.3f %.3f %.3f %.3f %.3f %.3f\n", xi, yi, dist, vxi, vyi, itime);
+            printf("%.3f %.3f %.3f %.3g %.3g %.3f\n", xi, yi, dist, vxi, vyi, itime);
           } else if (M_opt > 0) {
             printf("%.3f %.3f %.3f %.3f\n", xi, yi, dist, mask_val);
           } else {
@@ -590,10 +590,10 @@ int main(int argc, char **argv) {
              * new_delta = new_dt * uv
              */
             if (verbose)
-              printf("#T# reducing delta = %.3f ", delta);
+              printf("#T# reducing delta = %.3g ", delta);
             delta = (delta / uv - time_excess) * uv;
             if (verbose)
-              printf(" -> %.3f to match maxtime = %f \n", delta, maxtime);
+              printf(" -> %.3f to match maxtime = %g \n", delta, maxtime);
           } else if (time_excess < 0.0) {
             /* regular time step required */
           } else {
@@ -872,13 +872,19 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 } /* main */
 
-/*****************************************************************************/
+/*****************************************************************************
+ * interp2 results in nan if any of the four pixel is nan
+ * See also https://github.com/JuliaMath/Interpolations.jl/issues/192
+ *          https://github.com/scipy/scipy/issues/11381
+ */
 int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double *p_vy, double xi, double yi,
             double *p_vxi, double *p_vyi) {
   size_t ixel = 0, iyel = 0;   /* where we are */
   size_t ixel1 = 0, iyel1 = 0; /* the next */
   size_t i00, i01, i10, i11;
   double p1 = 0.0, p2 = 0.0, q1 = 0.0, q2 = 0.0;
+  double xinc = 0.0, yinc = 0.0;
+  double xerr = 0.0, yerr = 0.0;
 
 #if TEST_LOCATE
   size_t ixel_dbg = 0;
@@ -918,10 +924,28 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   ixel1 = MIN(ixel + 1, nx - 1);
   iyel1 = MIN(iyel + 1, ny - 1);
 
+  xinc = fabs(p_x[ixel1] - p_x[ixel]);
+  yinc = fabs(p_y[iyel1] - p_y[iyel]);
+  debug_printf(DEBUG_INFO, "found xinc = %.3f, yinc = %.3f\n", xinc, yinc);
+
+
+  /* index in two-dimensional data array */
   i00 = (iyel) * (nx) + ixel;
   i01 = (iyel) * (nx) + ixel1;
   i10 = (iyel1) * (nx) + ixel;
   i11 = (iyel1) * (nx) + ixel1;
+
+  /* check if we are on the grid */
+  xerr = fabs(xi - p_x[ixel]);
+  yerr = fabs(yi - p_y[iyel]);
+  debug_printf(DEBUG_INFO, "found xerr = %.3f, yerr = %.3f\n", xerr, yerr);
+  if ( xerr < 1e-3 * xinc && yerr < 1e-3 * yinc) {
+    debug_printf(DEBUG_INFO, "Point is on grid -> early exit interp2(...)\n");
+    (*p_vxi) = p_vx[i00];
+    (*p_vyi) = p_vy[i00];
+    return EXIT_SUCCESS;
+  }
+
 
   debug_printf(DEBUG_INFO, "vx[i00] =  %.3g\n", p_vx[i00]);
   debug_printf(DEBUG_INFO, "vx[i10] =  %.3g\n", p_vx[i10]);
@@ -933,10 +957,11 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   debug_printf(DEBUG_INFO, "vy[i01] =  %.3g\n", p_vy[i01]);
   debug_printf(DEBUG_INFO, "vy[i11] =  %.3g\n", p_vy[i11]);
 
+  // linear interpolation between the lower two quadrants along the X axis
   p1 = p_vx[i00] + (xi - p_x[ixel]) * (p_vx[i10] - p_vx[i00]) / (p_x[ixel + 1] - p_x[ixel]);
-
+  // linear interpolation between the upper two quadrants along the X axis
   q1 = p_vx[i01] + (xi - p_x[ixel]) * (p_vx[i11] - p_vx[i01]) / (p_x[ixel + 1] - p_x[ixel]);
-
+  // linear interpolation between the two virtual points p1 and q1 along the Y axis
   (*p_vxi) = p1 + (yi - p_y[iyel]) * (q1 - p1) / (p_y[iyel + 1] - p_y[iyel]);
 
   p2 = p_vy[i00] + (xi - p_x[ixel]) * (p_vy[i10] - p_vy[i00]) / (p_x[ixel + 1] - p_x[ixel]);
@@ -945,8 +970,8 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
 
   (*p_vyi) = p2 + (yi - p_y[iyel]) * (q2 - p2) / (p_y[iyel + 1] - p_y[iyel]);
 
-  debug_printf(DEBUG_INFO, "p1 =  %.3f -> q1 = %.3f\n", p1, q1);
-  debug_printf(DEBUG_INFO, "p2 =  %.3f -> q2 = %.3f\n", p2, q2);
+  debug_printf(DEBUG_INFO, "p1 =  %.3g -> q1 = %.3g\n", p1, q1);
+  debug_printf(DEBUG_INFO, "p2 =  %.3g -> q2 = %.3g\n", p2, q2);
 
   return EXIT_SUCCESS;
 } /* interp2 */
