@@ -24,12 +24,17 @@
 #ifndef PACKAGE_NAME
 #define PACKAGE_NAME "grd2stream"
 #endif
-
-#include <getopt.h>
 #include <math.h>
 #include <netcdf.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h> /* for getopt() */
+
+#ifdef HAVE_GETOPT_H
+#include <getopt.h>
+#else
+#include "own_getopt.h"
+#endif
 
 #include "debug_printf.h"
 #include "grdio.h"
