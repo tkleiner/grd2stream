@@ -68,6 +68,12 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_RANLIB
 
+# netcdf.h and gmt_resources.h require C99 extensions
+AX_CHECK_COMPILE_FLAG([-std=c11],
+  [AX_APPEND_FLAG([-std=c11])],
+  [AC_MSG_WARN([-std=c11 not supported, you may have to set CFLAGS to enable C11 support.])
+])
+
 # Checks for libraries.
 AC_CHECK_LIB([m], [sqrt])
 

@@ -49,6 +49,8 @@ Build grd2stream-X.X.X.tar.gz e.g. by
   ./configure --prefix=$HOME NETCDF_INC=/opt/local/include NETCDF_LIB=/opt/local/lib
   # all gdal readable file formats via GMT6 API (preferred)
   ./configure --prefix=$HOME --enable-gmt-api
+  # check other compilers
+  CC=clang ./configure --enable-gmt-api --enable-debug
   make && make dist
   
 

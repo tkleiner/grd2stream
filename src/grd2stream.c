@@ -157,7 +157,7 @@ void test_locate(void) {
 
   for (int i = 0; i < sizeof(xiv) / sizeof(double); i++) {
     xi = xiv[i];
-    printf("search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n", xi, 0, xv[0], nx - 1, xv[nx - 1]);
+    printf("search xi = %.3f in x[0] = %.3f < xi < x[%lu] = %.3f\n", xi, xv[0], nx - 1, xv[nx - 1]);
     locate(xv, nx, xi, &ixel);
     printf("found xi = %.3f -> x[%lu] = %.3f\n", xi, ixel, xv[ixel]);
   }
