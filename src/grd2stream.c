@@ -48,8 +48,6 @@
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
-#define SQRT sqrtf
-
 /** bi-linear interpolation
  *
  * using grid locations (i, j), (i + 1, j), (i, j + 1) and (i + 1, j + 1)
@@ -585,7 +583,7 @@ int main(int argc, char **argv) {
             printf("#M# %.3f %.3f NaN\n", x0, y0);
           break;
         }
-        if ((uv = SQRT(vxi * vxi + vyi * vyi)) <= 0.0) {
+        if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xi, yi, x0, y0);
           if (M_opt)
             printf("#M# %.3f %.3f NaN\n", x0, y0);
@@ -670,7 +668,7 @@ int main(int argc, char **argv) {
             printf("#M# %.3f %.3f NaN\n", x0, y0);
           break;
         }
-        if ((uv = SQRT(vxi * vxi + vyi * vyi)) <= 0.0) {
+        if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xt, yt, x0, y0);
           if (M_opt)
             printf("#M# %.3f %.3f NaN\n", x0, y0);
@@ -695,7 +693,7 @@ int main(int argc, char **argv) {
             printf("#M# %.3f %.3f NaN\n", x0, y0);
           break;
         }
-        if ((uv = SQRT(vxi * vxi + vyi * vyi)) <= 0.0) {
+        if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xt, yt, x0, y0);
           if (M_opt)
             printf("#M# %.3f %.3f NaN\n", x0, y0);
@@ -720,7 +718,7 @@ int main(int argc, char **argv) {
             printf("#M# %.3f %.3f NaN\n", x0, y0);
           break;
         }
-        if ((uv = SQRT(vxi * vxi + vyi * vyi)) <= 0.0) {
+        if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xt, yt, x0, y0);
           if (M_opt)
             printf("#M# %.3f %.3f NaN\n", x0, y0);
@@ -819,7 +817,7 @@ int main(int argc, char **argv) {
           fprintf(stderr, "#E: x = %.3f, y = %.3f, dx = %.3f, dy = %.3f\n", xi, yi, dx, dy);
         }
 
-        lim = SQRT(dx * dx + dy * dy);
+        lim = sqrt(dx * dx + dy * dy);
         if (lim * 1000.0 < (MIN(x_inc, y_inc))) {
           log_break_stepsize(lim, x_inc, y_inc, x0, y0);
           if (M_opt)
