@@ -1,3 +1,8 @@
+## clion ide
+.idea/**
+build/**
+
+
 ## files after ./bootstrap.sh
 Makefile.in
 aclocal.m4
@@ -20,6 +25,8 @@ stamp-h1
 
 ## files after make
 src/grd2stream
+src/cdist2grd
+
 example/_tmp*
 *.tar.gz
 *.o

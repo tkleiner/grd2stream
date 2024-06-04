@@ -45,7 +45,10 @@ Build grd2stream-X.X.X.tar.gz e.g. by
   git clone https://gitlab.awi.de/tkleiner/grd2stream.git
   cd grd2stream
   ./bootsrap.sh
-  ./configure --prefix=$HOME ./configure NETCDF_INC=/opt/local/include NETCDF_LIB=/opt/local/lib
+  # generic GMT *.grd file format
+  ./configure --prefix=$HOME NETCDF_INC=/opt/local/include NETCDF_LIB=/opt/local/lib
+  # all gdal readable file formats via GMT6 API (preferred)
+  ./configure --prefix=$HOME --enable-gmt-api
   make && make dist
   
 
