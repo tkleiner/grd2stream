@@ -5,14 +5,12 @@
 /*
  * grd2stream
  * reads two 2-D gridded files which represents the  x-  and  y-
- * components  of a vector field and produces a stream line polygon with
+ * components  of a vector field and produces a streamline polygon with
  * starting at point x0,y0 reading from stdin or file
  */
 
 /*
- * @todo: fix points outside grids in output
  * @todo: get a better guess for step size
- * @todo:
  */
 
 #ifdef HAVE_CONFIG_H
@@ -20,7 +18,7 @@
 #endif
 
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "0.2.10"
+#define PACKAGE_VERSION "0.2.12"
 #endif
 
 #ifndef PACKAGE_NAME
@@ -52,22 +50,22 @@
 
 #define SQRT sqrtf
 
-/**
+/** bi-linear interpolation
+ *
+ * using grid locations (i, j), (i + 1, j), (i, j + 1) and (i + 1, j + 1)
  *
  */
 static int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double *p_vy, double xi, double yi,
-                   double *p_vxi, double *p_vyi);
+                   double *p_vxi, double *p_vyi, double eps);
 
 /**
- * returns a value i such that x is between xx[i] and xx[i+1]
- * for non-equidistant grids
+ * Given an array xx[1..n], and given a value x, returns a value j such that x is between xx[j] and xx[j+1].
+ * xx must be monotonic, either increasing or decreasing. j=0 or j=n is returned to indicate that x is out of range.
+ * This includes the situation, when x == xx[j], and thus, xx[j + 1] is just the next neighbour
+ *
+ * See "Numerical Recipies in C" 2nd Edition section "3.4 How to Search an Ordered Table"
  */
 static void locate(double *xx, size_t n, double x, size_t *j);
-
-/**
- * old version (obsolete)
- */
-void locate_slow(double *xx, size_t n, double x, size_t *j);
 
 /**
  * print usage information and exit
@@ -147,6 +145,21 @@ void log_break_delta(double x0, double y0, unsigned long iter, double delta) {
   }
 }
 
+void test_locate(void) {
+  double xiv[] = {3.5, 2.0, 6.0, -1.0};    // test locations xi
+  double xv[] = {0., 1., 2., 3., 4., 5.};  // x-vector
+  const size_t nx = sizeof(xv) / sizeof(double);
+  double xi;
+  size_t ixel;
+
+  for (int i = 0; i < sizeof(xiv) / sizeof(double); i++) {
+    xi = xiv[i];
+    printf("search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n", xi, 0, xv[0], nx - 1, xv[nx - 1]);
+    locate(xv, nx, xi, &ixel);
+    printf("found xi = %.3f -> x[%lu] = %.3f\n", xi, ixel, xv[ixel]);
+  }
+}
+
 /* for logging */
 const char *program_name = PACKAGE_NAME;
 
@@ -216,10 +229,11 @@ int main(int argc, char **argv) {
   int T_opt = 0; /* stop after given time */
 
   /* experimental options */
-  int L_opt = 0; /* 3col input */
-  int D_opt = 0; /* check distance */
-  int B_opt = 0; /* write blank file: this is experimental */
-  int M_opt = 0; /* read MASK */
+  int L_opt = 0;     /* 3col input */
+  int D_opt = 0;     /* check distance */
+  int B_opt = 0;     /* write blank file: this is experimental */
+  int M_opt = 0;     /* read MASK */
+  double eps = 1e-3; /* relative distance error for a point to be considered at the grid */
 
   /* Initialize logging facility */
   /*  log_initialize(opt_nodaemon ? LOG_TO_STDERR : LOG_TO_SYSLOG);*/
@@ -229,9 +243,16 @@ int main(int argc, char **argv) {
   (void)log_set_debug(DEBUG_TRACE_NONE); /* or DEBUG_TRACE_ALL,... */
 #endif
 
+  // do nothing but testing
+  // test_locate();
+  // return (EXIT_SUCCESS);
+
   /* parse commandline args */
-  while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:")) != -1)
+  while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:e:")) != -1)
     switch (oc) {
+      case 'e':
+        eps = (double)atof(optarg);
+        break;
       case 't':
         /* report time */
         t_opt = 1;
@@ -329,6 +350,8 @@ int main(int argc, char **argv) {
 
   if (b_opt) {
     dir = -1.0;
+  } else {
+    dir = 1.0;
   }
 
   /* read the grid files */
@@ -489,11 +512,12 @@ int main(int argc, char **argv) {
       }
 
       /* insert ogr2ogr header: https://docs.generic-mapping-tools.org/6.3/cookbook/ogrgmt-format.html */
-      if (npoly==0){
-          printf("# @VGMT1.0 @GLINESTRING \n"
-                 "# @Nname|id\n"
-                 "# @Tstring|integer\n"
-                 "# FEATURE_DATA\n");
+      if (npoly == 0) {
+        printf(
+            "# @VGMT1.0 @GLINESTRING \n"
+            "# @Nname|id\n"
+            "# @Tstring|integer\n"
+            "# FEATURE_DATA\n");
       }
 
       npoly++;
@@ -521,29 +545,17 @@ int main(int argc, char **argv) {
         /*
          * STEP 0 (get initial velocity data at requested point)
          */
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi);
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi, eps);
         if (verbose > 1) {
-          fprintf(stderr, "# x = %.3f, y = %.3f, vx = %.3e, vy = %.3e\n", xi, yi, vxi, vyi);
+          fprintf(stderr, "#S: x = %.3f, y = %.3f, vx = %.3e, vy = %.3e\n", xi, yi, vxi, vyi);
         }
+
         /* check if mask reached */
         if (M_opt > 0) {
           im = (size_t)(((xi - p_xm[0]) / xm_inc));
           jm = (size_t)(((yi - p_ym[0]) / ym_inc));
           mask_val = p_mask[jm * nxm + im];
         }
-
-        /* /\* this is the output *\/ */
-        /* if (! (iter % freq) ) { */
-        /*   if(l_opt) { */
-        /*     printf("%.3f %.3f %.3f %.3f %.3f\n",xi,yi,dist,vxi,vyi); */
-        /*   } else { */
-        /*     if (M_opt > 0) { */
-        /*       printf("%.3f %.3f %.3f %.3f\n",xi,yi,dist,mask_val); */
-        /*     } else { */
-        /*       printf("%.3f %.3f %.3f\n",xi,yi,dist); */
-        /*     } */
-        /*   } */
-        /* } */
 
         /* this is the output */
         if (!(iter % freq)) {
@@ -609,8 +621,8 @@ int main(int argc, char **argv) {
 
         /* advance now */
         dist += (delta * dir);
-        dx0 = dir * delta * vxi / uv;
-        dy0 = dir * delta * vyi / uv;
+        dx0 = dir * delta * vxi / uv; /* if vxi > && dir <= 0, then dx0 is already negative */
+        dy0 = dir * delta * vyi / uv; /* if vyi > && dir <= 0, then dy0 is already negative */
         itime += delta / uv;
 
         /*
@@ -628,10 +640,9 @@ int main(int argc, char **argv) {
             printf("#M# %.3f %.3f NaN\n", x0, y0);
           break;
         }
-
         if (verbose > 2) {
-          fprintf(stderr, "#\t x0=%15.3f, y0=%15.3f,", xi, yi);
-          fprintf(stderr, " dx0=%15.5f, dy0=%15.5f\n", dx0, dy0);
+          fprintf(stderr, "#\tRK0: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
+                  xi, yi, vxi, vyi, dx0, dy0);
         }
 
         /*  check stepsize  */
@@ -650,9 +661,9 @@ int main(int argc, char **argv) {
         /*
          * RK-STEP 1
          */
-        xt = xi + dir * dx0 / 2.0f;
-        yt = yi + dir * dy0 / 2.0f;
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi);
+        xt = xi + dx0 / 2.0f;
+        yt = yi + dy0 / 2.0f;
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
           if (M_opt)
@@ -667,10 +678,9 @@ int main(int argc, char **argv) {
         }
         dx1 = dir * delta * vxi / uv;
         dy1 = dir * delta * vyi / uv;
-
         if (verbose > 2) {
-          fprintf(stderr, "#\t x1=%15.3f, y1=%15.3f,", xt, yt);
-          fprintf(stderr, " dx1=%15.5f, dy1=%15.5f\n", dx1, dy1);
+          fprintf(stderr, "#\tRK1: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
+                  xt, yt, vxi, vyi, dx1, dy1);
         }
 
         /*
@@ -678,8 +688,7 @@ int main(int argc, char **argv) {
          */
         xt = xi + dx1 / 2.0f;
         yt = yi + dy1 / 2.0f;
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi);
-
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
           if (M_opt)
@@ -694,10 +703,9 @@ int main(int argc, char **argv) {
         }
         dx2 = dir * delta * vxi / uv;
         dy2 = dir * delta * vyi / uv;
-
         if (verbose > 2) {
-          fprintf(stderr, "#\t x2=%15.3f, y2=%15.3f,", xt, yt);
-          fprintf(stderr, " dx2=%15.5f, dy2=%15.5f\n", dx2, dy2);
+          fprintf(stderr, "#\tRK2: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
+                  xt, yt, vxi, vyi, dx1, dy1);
         }
 
         /*
@@ -705,8 +713,7 @@ int main(int argc, char **argv) {
          */
         xt = xi + dx2;
         yt = yi + dy2;
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi);
-
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
           if (M_opt)
@@ -721,14 +728,14 @@ int main(int argc, char **argv) {
         }
         dx3 = dir * delta * vxi / uv;
         dy3 = dir * delta * vyi / uv;
-
         if (verbose > 2) {
-          fprintf(stderr, "#\t x3=%15.3f, y3=%15.3f,", xt, yt);
-          fprintf(stderr, " dx3=%15.5f, dy3=%15.5f\n", dx3, dy3);
+          fprintf(stderr, "#\tRK3: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
+                  xt, yt, vxi, vyi, dx3, dy3);
         }
 
+
         /*
-         * RK-STEP update
+         * final RK-STEP update
          */
         dx = (dx0 / 6.0f + dx1 / 3.0f + dx2 / 3.0f + dx3 / 6.0f);
         dy = (dy0 / 6.0f + dy1 / 3.0f + dy2 / 3.0f + dy3 / 6.0f);
@@ -808,10 +815,8 @@ int main(int argc, char **argv) {
         /*
          * END TESTING HERE
          */
-
         if (verbose > 1) {
-          fprintf(stderr, "# x = %.3f, y = %.3f,", xi, yi);
-          fprintf(stderr, " dx = %.3f, dy = %.3f\n", dx, dy);
+          fprintf(stderr, "#E: x = %.3f, y = %.3f, dx = %.3f, dy = %.3f\n", xi, yi, dx, dy);
         }
 
         lim = SQRT(dx * dx + dy * dy);
@@ -822,7 +827,7 @@ int main(int argc, char **argv) {
           break;
         }
       }
-      /* end of work for one stream line */
+      /* end of work for one streamline */
       if (iter == maxiter) {
         log_break_maxiter(x0, y0);
         if (M_opt)
@@ -873,22 +878,18 @@ int main(int argc, char **argv) {
 } /* main */
 
 /*****************************************************************************
- * interp2 results in nan if any of the four pixel is nan
+ * interp2_fwd results in nan if any of the four pixel is nan
  * See also https://github.com/JuliaMath/Interpolations.jl/issues/192
  *          https://github.com/scipy/scipy/issues/11381
  */
 int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double *p_vy, double xi, double yi,
-            double *p_vxi, double *p_vyi) {
+            double *p_vxi, double *p_vyi, double eps) {
   size_t ixel = 0, iyel = 0;   /* where we are */
   size_t ixel1 = 0, iyel1 = 0; /* the next */
   size_t i00, i01, i10, i11;
   double p1 = 0.0, p2 = 0.0, q1 = 0.0, q2 = 0.0;
   double xinc = 0.0, yinc = 0.0;
   double xerr = 0.0, yerr = 0.0;
-
-#if TEST_LOCATE
-  size_t ixel_dbg = 0;
-#endif
 
   debug_printf(DEBUG_INFO, "search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n", xi, 0, p_x[0], nx - 1,
                p_x[nx - 1]);
@@ -903,10 +904,6 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
     ixel = 0;
   } else {
     locate(p_x, nx, xi, &ixel);
-#if TEST_LOCATE
-    locate_slow(p_x, nx, xi, &ixel_dbg);
-    fprintf(stderr, "x[%lu] = %.3f  <=> x[%lu] = %.3f\n", ixel, p_x[ixel], ixel_dbg, p_x[ixel_dbg]);
-#endif
   }
   debug_printf(DEBUG_INFO, "found xi = %.3f -> x[%lu] = %.3f\n", xi, ixel, p_x[ixel]);
 
@@ -928,7 +925,6 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   yinc = fabs(p_y[iyel1] - p_y[iyel]);
   debug_printf(DEBUG_INFO, "found xinc = %.3f, yinc = %.3f\n", xinc, yinc);
 
-
   /* index in two-dimensional data array */
   i00 = (iyel) * (nx) + ixel;
   i01 = (iyel) * (nx) + ixel1;
@@ -938,14 +934,13 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   /* check if we are on the grid */
   xerr = fabs(xi - p_x[ixel]);
   yerr = fabs(yi - p_y[iyel]);
-  debug_printf(DEBUG_INFO, "found xerr = %.3f, yerr = %.3f\n", xerr, yerr);
-  if ( xerr < 1e-3 * xinc && yerr < 1e-3 * yinc) {
+  debug_printf(DEBUG_INFO, "Found xerr = %.3f, yerr = %.3f\n", xerr, yerr);
+  if (xerr < eps * xinc && yerr < eps * yinc) {
     debug_printf(DEBUG_INFO, "Point is on grid -> early exit interp2(...)\n");
     (*p_vxi) = p_vx[i00];
     (*p_vyi) = p_vy[i00];
     return EXIT_SUCCESS;
   }
-
 
   debug_printf(DEBUG_INFO, "vx[i00] =  %.3g\n", p_vx[i00]);
   debug_printf(DEBUG_INFO, "vx[i10] =  %.3g\n", p_vx[i10]);
@@ -976,22 +971,7 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   return EXIT_SUCCESS;
 } /* interp2 */
 
-/**
- *
- */
-void locate_slow(double *xx, size_t n, double x, size_t *j) {
-  size_t i;
-  i = 0;
-  while (xx[i] <= x) {
-    i++;
-  }
-  *j = i - 1;
-} /* locate */
-
-/*
- *
- */
-void locate(double *xx, size_t n, double x, size_t *i) {
+void locate(double *xx, size_t n, double x, size_t *j) {
   /* fast search
    * table lookup */
   size_t iu, im, il;
@@ -1009,11 +989,11 @@ void locate(double *xx, size_t n, double x, size_t *i) {
   }
 
   if (x == xx[0])
-    *i = 0;
+    *j = 0;
   else if (x == xx[n - 1])
-    *i = n - 1;
+    *j = n - 1;
   else
-    *i = il;
+    *j = il;
 
 } /* locate */
 
@@ -1029,7 +1009,7 @@ void usage(void) {
           "USAGE:\n"
           "  %s v_x.grd v_y.grd -f xyfile \n\n"
           "  v_x.grd & v_y.grd   grid files with the 2 vector components\n"
-          "  xyfile              two column ASCII file containing (x0,y0)\n",
+          "  xyfile              two column ASCII file containing seed point coordinates (x0,y0)\n",
           program_name);
   fprintf(stderr,
           "\nOPTIONS:\n"
@@ -1049,8 +1029,7 @@ void usage(void) {
   fprintf(stderr,
           "\nDESCRIPTION:\n"
           "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
-          "  and generates polylines in multiple seqment mode each starting at "
-          "x0,y0.\n"
+          "  and generates polylines in multiple segment mode each starting at x0,y0.\n"
           "  Output: 'x y dist' (3 cols) to stdout.\n",
           program_name);
   fprintf(stderr,
