@@ -15,7 +15,7 @@ bin_PROGRAMS = grd2stream cdist2grd
 noinst_HEADERS = debug_printf.h grdio.h log.h gmtopts.h
 
 ## make sure we keep them
-EXTRA_DIST = own_getopt.c own_getopt.h
+EXTRA_DIST = own_getopt.c own_getopt.h own_getopt.h
 
 ##
 ## grd2stream
@@ -23,11 +23,7 @@ EXTRA_DIST = own_getopt.c own_getopt.h
 grd2stream_CFLAGS = 
 grd2stream_LDFLAGS = $(STATIC_LIBS)
 grd2stream_LDADD =
-grd2stream_SOURCES = grdio.c debug_printf.c log.c  grd2stream.c
-if !SYSTEM_GETOPT
-grd2stream_SOURCES += own_getopt.c
-noinst_HEADERS += own_getopt.h
-endif
+grd2stream_SOURCES = grdio.c debug_printf.c log.c  grd2stream.c own_getopt.c
 
 ##
 ## cdist2grd
@@ -35,11 +31,8 @@ endif
 cdist2grd_CFLAGS =
 cdist2grd_LDFLAGS = $(STATIC_LIBS)
 cdist2grd_LDADD =
-cdist2grd_SOURCES  = cdist2grd.c gmtopts.c grdio.c debug_printf.c
-if !SYSTEM_GETOPT
-cdist2grd_SOURCES += own_getopt.c
-noinst_HEADERS += own_getopt.h
-endif
+cdist2grd_SOURCES  = cdist2grd.c gmtopts.c grdio.c debug_printf.c own_getopt.c
+
 
 
 CLEANFILES = *.c~ *.h~

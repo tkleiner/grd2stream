@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2024-06-04 16:10:27 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2024-06-05 10:39:24 (tkleiner)>"
 #endif
 
 /*
@@ -30,12 +30,7 @@
 #include <stdlib.h>
 #include <unistd.h> /* for getopt() */
 
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#else
 #include "own_getopt.h"
-#endif
-
 #include "debug_printf.h"
 #include "grdio.h"
 #include "log.h"
