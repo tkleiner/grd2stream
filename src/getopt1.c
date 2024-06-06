@@ -97,6 +97,7 @@ getopt_long_only (argc, argv, options, long_options, opt_index)
 
 #ifdef TEST
 
+#include <stdlib.h>
 #include <stdio.h>
 
 int
