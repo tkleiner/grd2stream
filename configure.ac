@@ -81,26 +81,6 @@ AC_CHECK_LIB([m], [sqrt])
 # getopt() is in unistd.h
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
 
-dnl Check for GNU getopt
-dnl https://github.com/jstedfast/gmime/blob/master/configure.ac
-AC_CHECK_HEADER(getopt.h)
-AC_MSG_CHECKING(for GNU getopt_long)
-AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-	#include <string.h>
-	#include <unistd.h>
-	#define _GNU_SOURCE
-	#include <getopt.h>
-	]], [[
-	return getopt_long (0, NULL, NULL, NULL, NULL);
-
-]])],[AC_MSG_RESULT(yes)
-	AC_DEFINE(HAVE_GETOPT_H, 1, Define to 1 if you have the <getopt.h> header with the GNU `getopt_long` function.)
-	have_getopt="yes"
-],[AC_MSG_RESULT(no)
-	have_getopt="no"
-])
-AM_CONDITIONAL(SYSTEM_GETOPT, test "x$have_getopt" = "xyes")
-
 
 #-------------------------------------------------------------------------------#
 #  Find NetCDF library and header files                                         #
