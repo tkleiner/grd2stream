@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "own_getopt.h"
+#include "getopt.h"
 #include "debug_printf.h"
 #include "gmtopts.h"
 #include "grdio.h"

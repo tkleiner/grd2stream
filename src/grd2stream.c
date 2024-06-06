@@ -28,9 +28,8 @@
 #include <netcdf.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h> /* for getopt() */
 
-#include "own_getopt.h"
+#include "getopt.h"
 #include "debug_printf.h"
 #include "grdio.h"
 #include "log.h"
