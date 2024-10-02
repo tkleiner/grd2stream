@@ -37,6 +37,12 @@ README.pdf
 ## files after make
 src/grd2stream
 src/cdist2grd
+src/.libs/
+src/getopt.lo
+src/getopt1.lo
+src/libgnugetopt.la
+
+
 
 example/_tmp*
 *.tar.gz
