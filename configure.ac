@@ -41,32 +41,17 @@ AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[Compile in debug mode @<:@
     enable_debug=no)
 AM_CONDITIONAL(ENABLE_DEBUG, test "x${enable_debug}" == "xyes" )
 
-dnl
-dnl Static libs
-dnl 
-AC_ARG_ENABLE(static,
-        AS_HELP_STRING([--enable-static],[force static linking @<:@default=no@:>@]),
-        [enable_static=$enableval],
-        [enable_static=no])
-if test "x${enable_static}" = "xyes"; then
-        STATIC_LIBS=-static
-fi
-AC_SUBST(STATIC_LIBS)
-AM_CONDITIONAL(ENABLE_STATIC, test "x${enable_static}" = "xyes")
-
-
 dnl this could dbe removed later, if api calls are tested
 AC_ARG_ENABLE(gmt-api,
         AS_HELP_STRING([--enable-gmt-api],[try linking to gmt api@<:@default=no@:>@]),
         [enable_gmt_api=$enableval],
         [enable_gmt_api=no])
 
-
-
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
-AC_PROG_RANLIB
+LT_INIT
+AC_PROG_INSTALL
 
 # netcdf.h and gmt_resources.h require C99 extensions
 AX_CHECK_COMPILE_FLAG([-std=c11],
