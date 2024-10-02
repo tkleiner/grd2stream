@@ -37,10 +37,19 @@ These instructions assume that you use `MacPorts <https://www.macports.org/>`_.
 Note, you can have gmt4 and gmt6 installed at the same time without interference.
 
 .. code-block:: bash
-    
+
     sudo port install gdal +netcdf+hdf5
     sudo port install gmt6 +gdal
 
+**Installing required libraries using Conda**
+
+.. code-block:: bash
+
+    # on albedo0|1
+    module purge
+    module load conda
+    # setup your environment called GMT6 as an example
+    conda create -y -n GMT6 gmt=6* gdal hdf5 netcdf4
 
 **Install grd2stream version X.X.X**
 
@@ -50,6 +59,17 @@ Note, you can have gmt4 and gmt6 installed at the same time without interference
   cd grd2stream-X.X.X
   ./configure --prefix=$HOME --enable-gmt-api
   make && make install
+
+Alternatively install `grd2stream` into your GMT6 conda environment
+
+.. code-block:: bash
+
+  conda activate GMT6
+  tar xvfz grd2stream-X.X.X.tar.gz
+  cd grd2stream-X.X.X
+  ./configure ./configure --prefix=$CONDA_PREFIX --enable-gmt-api
+  make && make install
+
 
 Packaging (Maintainer only)
 ---------------------------
@@ -68,15 +88,10 @@ Build grd2stream-X.X.X.tar.gz e.g. by
   # check other compilers
   CC=clang ./configure --enable-gmt-api --enable-debug
   make && make dist
-  
 
-
-    
 
 Contribute
 ----------
 
 - Issue Tracker: https://gitlab.awi.de/tkleiner/grd2stream/issues
 - Source Code: https://gitlab.awi.de/tkleiner/grd2stream/tree/master
-
-
