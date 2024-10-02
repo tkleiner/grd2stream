@@ -1,10 +1,20 @@
 Implements a Runge-Kutta stream line integration based on gridded velocity
-fields in native GMT grid format (vx.grd, vy.grd). The GMT5-API (or newer)
-is not used at the moment.
+fields in native GMT grid format (vx.grd, vy.grd).
 
 .. code-block:: bash
 
     echo "0 0" | grd2stream vx.grd vy.grd | psxy -m -R -J ...
+
+Newer versions of `grd2stream` can be linked to the
+`GMT-API <https://docs.generic-mapping-tools.org/latest/devdocs/api.html>`_ for file IO. The old GMT5-API is no longer supported.
+
+If GMT6 is installed with GDAL support, all GDAL file formats (e.g., NetCDF, GTiFF, etc.) can be read.
+If you are not familiar with the GMT-style of excessing the different file formats, please check
+the `GMT reference <https://docs.generic-mapping-tools.org/6.5/reference/features.html#write-grids-images>`_.
+
+.. code-block:: bash
+
+    echo "0 0" | grd2stream velocity.nc?vx velocity.nc?vy | gmt plot ...
 
 
 Example
@@ -18,21 +28,27 @@ Example
    Several stream lines as point or line sources from grd2stream and GMT mapping tools. 
 
 
-
-ToDo:
------
-- Use GMT-API for file io!
-- If GMT5 is installed with GDAL support, all GDAL file formats can be read (e.g., netCDF, GTiFF, etc.)
-
-
 Installation
 ------------
 
-Install grd2stream e.g. by
+**Installing required libraries on macOS**
+
+These instructions assume that you use `MacPorts <https://www.macports.org/>`_.
+Note, you can have gmt4 and gmt6 installed at the same time without interference.
+
+.. code-block:: bash
+    
+    sudo port install gdal +netcdf+hdf5
+    sudo port install gmt6 +gdal
+
+
+**Install grd2stream version X.X.X**
 
 .. code-block:: bash
 
-  ./configure --prefix=$HOME NETCDF_INC=/opt/local/include NETCDF_LIB=/opt/local/lib
+  tar xvfz grd2stream-X.X.X.tar.gz
+  cd grd2stream-X.X.X
+  ./configure --prefix=$HOME --enable-gmt-api
   make && make install
 
 Packaging (Maintainer only)
