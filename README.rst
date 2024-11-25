@@ -93,5 +93,4 @@ Build grd2stream-X.X.X.tar.gz e.g. by
 Contribute
 ----------
 
-- Issue Tracker: https://gitlab.awi.de/tkleiner/grd2stream/issues
-- Source Code: https://gitlab.awi.de/tkleiner/grd2stream/tree/master
+- Issue Tracker: https://github.com/tkleiner/grd2stream/issues
