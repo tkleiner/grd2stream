@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2024-10-02 13:29:10 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2024-12-17 22:18:35 (tkleiner)>"
 #endif
 
 /*
