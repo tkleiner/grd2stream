@@ -116,7 +116,7 @@ void log_break_dy(double y, double x0, double y0) {
 
 void log_break_stepsize(double stpsz, double xinc, double yinc, double x0, double y0) {
   if (log_breaks) {
-    fprintf(stderr, "Stop: Stepsize to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n", stpsz, xinc, yinc, x0, y0);
+    fprintf(stderr, "Stop: Step size to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n", stpsz, xinc, yinc, x0, y0);
   }
 }
 
@@ -130,14 +130,14 @@ void log_break_maxtime(double x0, double y0, unsigned long iter) {
   if (log_breaks) {
     fprintf(stderr,
             "Stop: Maximum integration time reached for seed (%.3f, %.3f) "
-            "after %u itterations\n",
+            "after %u iterations\n",
             x0, y0, (unsigned int)iter);
   }
 }
 
 void log_break_delta(double x0, double y0, unsigned long iter, double delta) {
   if (log_breaks) {
-    fprintf(stderr, "Stop: Invalid delta = %f for seed (%.3f, %.3f) after %u itterations\n", delta, x0, y0,
+    fprintf(stderr, "Stop: Invalid delta = %f for seed (%.3f, %.3f) after %u iterations\n", delta, x0, y0,
             (unsigned int)iter);
   }
 }
@@ -182,9 +182,9 @@ int main(int argc, char **argv) {
   double itime;                                     /* stream-line integration time in time units given by thge
                                                        velocity field */
   double maxtime;                                   /* same units as itime, less equal zero indicates an error */
-  double dist, dout, delta, delta_initial = 1000.0; /* unit m ???*/
+  double dist, dout, delta, delta_initial;          /* unit m ???*/
   double dir = 1.0;                                 /* direction (1.. forward, -1..backward) */
-  unsigned int freq = 1;
+  unsigned int freq = 2;                            /* default freq = 2 samples per grid cell */
 
   double *p_x = NULL;
   double *p_y = NULL;
@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
   int *blank = NULL;
   size_t nbx = 0, nby = 0;
   size_t ib = 0, jb = 0;
-  double xb_inc = 0.0, yb_inc = 0.0;
+  double xb_inc, yb_inc;
   double density = .1; /* 10% */
 
   char *p_vx_name = NULL;
@@ -240,9 +240,6 @@ int main(int argc, char **argv) {
   (void)log_set_debug(DEBUG_TRACE_NONE); /* or DEBUG_TRACE_ALL,... */
 #endif
 
-  // do nothing but testing
-  // test_locate();
-  // return (EXIT_SUCCESS);
 
   /* parse commandline args */
   while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:e:")) != -1)
@@ -392,10 +389,8 @@ int main(int argc, char **argv) {
   xb_inc = (p_x[nx - 1] - p_x[0]) / ((double)(nbx - 1));
   yb_inc = (p_y[ny - 1] - p_y[0]) / ((double)(nby - 1));
 
-  if (p_xc == NULL)
-    p_xc = (double *)calloc(nbx, sizeof(double));
-  if (p_yc == NULL)
-    p_yc = (double *)calloc(nby, sizeof(double));
+  p_xc = (double *)calloc(nbx, sizeof(double));
+  p_yc = (double *)calloc(nby, sizeof(double));
 
   for (i = 0; i < nbx; i++) {
     p_xc[i] = p_x[0] + i * xb_inc;
@@ -408,7 +403,6 @@ int main(int argc, char **argv) {
   }
 
   /* default freq = 2 samples per grid cell */
-  freq = 2;
   delta_initial = MIN(x_inc, y_inc) / ((double)freq);
 
   /*
@@ -426,7 +420,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Input:\n");
     fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", xmin, xmax, x_inc, nx);
     fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", ymin, ymax, y_inc, ny);
-    fprintf(stderr, "d_out: %.3f d_inc: %.3f RK: %d freq: %u\n", dout, delta, k_opt, freq);
+    fprintf(stderr, "d_out: %.3f d_inc: %.3f RK: %d freq: %u\n", dout, delta_initial, k_opt, freq);
     fprintf(stderr, "verbose: %u\n", verbose);
   }
 
@@ -437,7 +431,7 @@ int main(int argc, char **argv) {
   }
 
   if ((delta_initial > x_inc) || (delta_initial > y_inc)) {
-    fprintf(stderr, "WARN: Stepsize to large: %.3f > (%.3f, %.3f)\n", delta_initial, x_inc, y_inc);
+    fprintf(stderr, "WARN: Step size to large: %.3f > (%.3f, %.3f)\n", delta_initial, x_inc, y_inc);
   }
 
   if (p_file_name == NULL) { /* Just read standard input */
@@ -522,13 +516,12 @@ int main(int argc, char **argv) {
 
       dist = 0.0;
       itime = 0.0;
-      delta = delta_initial; /* reset delta for next stream line, important for
+      delta = delta_initial; /* reset delta for next streamline, important for
                                 -T option */
 
       /* simple step iteration */
       xi = x0;
       yi = y0;
-      iter = 0;
 
       /*
        * Points at current streamline
@@ -1012,9 +1005,10 @@ void usage(void) {
           "\nOPTIONS:\n"
           "  -b                  backward steps\n"
           "  -d inc              stepsize\n"
+          "  -f xyfile           file with seed points\n"
           /* "  -k                  select stepping method (default: RK4)\n" */
-          "  -l                  output format: 'x y dist v_x v_y' (5 cols)\n"
-          "  -t                  output format: 'x y dist v_x v_y time' (6 cols)\n"
+          "  -l                  output format: 'x y dist v_x v_y' (5 columns)\n"
+          "  -t                  output format: 'x y dist v_x v_y time' (6 columns)\n"
           "  -T maxtime          maximum integration time (default: none)\n"
           "  -n maxsteps         maximum number of steps (default: %d)\n"
           "  -V                  verbose output\n"
@@ -1027,16 +1021,19 @@ void usage(void) {
           "\nDESCRIPTION:\n"
           "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
           "  and generates polylines in multiple segment mode each starting at x0,y0.\n"
-          "  Output: 'x y dist' (3 cols) to stdout.\n",
+          "  Output: 'x y dist' (3 columns) to stdout.\n",
           program_name);
   fprintf(stderr,
           "\nNOTES:\n"
-          "  Units of x- and y- direction must match the spatial unit of the "
+          "  Units of the x- and y-direction must match the spatial unit of the "
           "velocity\n"
           "  to avoid unexpected results, e.g. m and m/a. \n"
           "  If the velocity is given in e.g. m/a, m/d or m/s \n"
           "  '-T 1' stops after one year, one day or 1 second respectively.\n"
-          "  Units are not converted in %s, thus keep the units consistent!\n",
+          "  Units are not converted in %s, thus keep the units consistent!\n"
+          "\n"
+          "  If you have more than one seed point, '-f xyfile' option has better performance,\n"
+          "  because the grid files need to be read only once.\n",
           program_name);
 #if ENABLE_GMT_API
   fprintf(stderr,
