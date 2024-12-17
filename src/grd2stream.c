@@ -518,7 +518,7 @@ int main(int argc, char **argv) {
       }
 
       npoly++;
-      printf(">\n# streamline|%u\n", npoly);
+      printf(">\n# @D\"streamline %u\"|%u\n", npoly,npoly);
 
       dist = 0.0;
       itime = 0.0;
