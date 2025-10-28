@@ -1,5 +1,5 @@
 #ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2024-12-17 22:18:35 (tkleiner)>"
+#define LAST_UPDATE "Time-stamp: <2025-10-28 10:02:27 (tkleiner)>"
 #endif
 
 /*
@@ -18,7 +18,7 @@
 #endif
 
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "0.2.13"
+#define PACKAGE_VERSION "none"
 #endif
 
 #ifndef PACKAGE_NAME
