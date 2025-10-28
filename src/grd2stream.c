@@ -727,8 +727,8 @@ int main(int argc, char **argv) {
 
         /*  check stepsize  */
         if (iter > 0 && k_opt == 4) {
-          ex = dx3 / 6.0f - vxi * delta / 6.0f;
-          ey = dy3 / 6.0f - vyi * delta / 6.0f;
+          ex = dx3 / 6.0 - vxi * delta / 6.0;
+          ey = dy3 / 6.0 - vyi * delta / 6.0;
         }
 
         /* early break for Euler method. Continue with next i */
@@ -741,8 +741,8 @@ int main(int argc, char **argv) {
         /*
          * RK-STEP 1
          */
-        xt = xi + dx0 / 2.0f;
-        yt = yi + dy0 / 2.0f;
+        xt = xi + dx0 / 2.0;
+        yt = yi + dy0 / 2.0;
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
@@ -773,8 +773,8 @@ int main(int argc, char **argv) {
         /*
          * RK-STEP 2
          */
-        xt = xi + dx1 / 2.0f;
-        yt = yi + dy1 / 2.0f;
+        xt = xi + dx1 / 2.0;
+        yt = yi + dy1 / 2.0;
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
@@ -837,8 +837,8 @@ int main(int argc, char **argv) {
         /*
          * final RK-STEP update
          */
-        dx = (dx0 / 6.0f + dx1 / 3.0f + dx2 / 3.0f + dx3 / 6.0f);
-        dy = (dy0 / 6.0f + dy1 / 3.0f + dy2 / 3.0f + dy3 / 6.0f);
+        dx = (dx0 / 6.0 + dx1 / 3.0 + dx2 / 3.0 + dx3 / 6.0);
+        dy = (dy0 / 6.0 + dy1 / 3.0 + dy2 / 3.0 + dy3 / 6.0);
 
         /*
          * check final step
