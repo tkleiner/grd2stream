@@ -29,7 +29,11 @@
 #include <netcdf.h>
 #include <stdio.h>
 #include <stdlib.h>
+//#include <unistd.h>  // for system getopt.h
+#include <errno.h>
 #include <string.h>
+#include <limits.h> // for UINT_MAX
+
 
 #include "debug_printf.h"
 #include "getopt.h"
@@ -210,6 +214,64 @@ void test_locate(void) {
   }
 }
 
+/** Helper: parse a double safely
+ * For floating-point options (-d, -e, -T, etc.)
+ */
+static double parse_double(const char *s, const char *optname) {
+  char *end;
+  errno = 0;
+  double val = strtod(s, &end);
+  if (end == s || *end != '\0' || errno == ERANGE) {
+    fprintf(stderr, "Invalid numeric argument for %s: '%s'\n", optname, s);
+    exit(EXIT_FAILURE);
+  }
+  return val;
+}
+
+/** Helper: parse a long safely
+ * for integer options (-k, -n, etc.)
+ * Replace atoi() with strtol() or strtoul() (for unsigned)
+ */
+static long parse_long(const char *s, const char *optname) {
+  char *end;
+  errno = 0;
+  long val = strtol(s, &end, 10);
+  if (end == s || *end != '\0' || errno == ERANGE) {
+    fprintf(stderr, "Invalid integer argument for %s: '%s'\n", optname, s);
+    exit(EXIT_FAILURE);
+  }
+  return val;
+}
+
+
+/** Helper: parse a long and verify it fits in unsigned int */
+static unsigned int parse_uint(const char *s, const char *optname) {
+  char *end;
+  errno = 0;
+  long val = strtol(s, &end, 10);
+
+  if (end == s || *end != '\0') {
+    fprintf(stderr, "Invalid integer argument for %s: '%s'\n", optname, s);
+    exit(EXIT_FAILURE);
+  }
+  if (errno == ERANGE) {
+    fprintf(stderr, "Numeric value out of range for %s: '%s'\n", optname, s);
+    exit(EXIT_FAILURE);
+  }
+  if (val < 0) {
+    fprintf(stderr, "Negative value not allowed for %s: '%s'\n", optname, s);
+    exit(EXIT_FAILURE);
+  }
+  if ((unsigned long)val > UINT_MAX) {
+    fprintf(stderr, "Value too large for %s (max %u): '%s'\n",
+            optname, UINT_MAX, s);
+    exit(EXIT_FAILURE);
+  }
+
+  return (unsigned int)val;
+}
+
+
 /* for logging */
 const char *program_name = PACKAGE_NAME;
 
@@ -218,19 +280,20 @@ int main(int argc, char **argv) {
   size_t nx = 0, ny = 0;
   double xmin, xmax, ymin, ymax, x_inc, y_inc;
 
-  unsigned long i, j, cnt, iter, maxiter = MAXSTEPS;
+  unsigned long i, j, iter, maxiter = MAXSTEPS;
   unsigned int nlines = 0, npoly = 0;
 
   double y0 = 0.0, x0 = 0.0; /* start positions */
-  double yi = 0.0, xi = 0.0;
-  double yt = 0.0, xt = 0.0;
-  double vxi = 0.0, vyi = 0.0, uv = 0.0; /* vx, vy and magnitude of velocity */
+  double yi, xi;
+  double yt, xt;
+  double vxi = 0.0, vyi = 0.0, uv; /* vx, vy and magnitude of velocity */
 
-  double dx0 = 0.0, dx1 = 0.0, dx2 = 0.0, dx3 = 0.0;
-  double dy0 = 0.0, dy1 = 0.0, dy2 = 0.0, dy3 = 0.0;
+  double dx0, dx1, dx2, dx3 = 0.0;
+  double dy0, dy1, dy2, dy3 = 0.0;
+  double dx, dy;
   double ex = 0.0, ey = 0.0; /* local error */
-  double dx = 0.0, dy = 0.0; /* local error */
-  double lim = 0.0;
+
+  double lim;
 
   double itime;                            /* stream-line integration time in time units given by thge
                                               velocity field */
@@ -297,7 +360,7 @@ int main(int argc, char **argv) {
   while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:e:F:G:")) != -1)
     switch (oc) {
       case 'e':
-        eps = (double)atof(optarg);
+        eps = parse_double(optarg, "-e");
         break;
       case 't':
         /* report time */
@@ -306,7 +369,7 @@ int main(int argc, char **argv) {
       case 'T':
         /* maximum integration time */
         T_opt = 1;
-        maxtime = (double)atof(optarg);
+        maxtime = parse_double(optarg, "-T");
         break;
       case 'b':
         /* go backward */
@@ -327,7 +390,8 @@ int main(int argc, char **argv) {
       case 'd':
         /* output step size */
         d_opt = 1;
-        dout = (double)atof(optarg);
+        // dout = (double)atof(optarg);
+        dout = parse_double(optarg, "-d");
         break;
       case 'F':
         /* float format */
@@ -347,25 +411,26 @@ int main(int argc, char **argv) {
         break;
       case 'k':
         /* stepping */
-        k_opt = atoi(optarg);
+        k_opt = (int)parse_long(optarg, "-k");
         break;
       case 'n':
         /* maximum number of steps allowed */
-        maxiter = (unsigned int)atoi(optarg);
+        // maxiter = (unsigned int) parse_long(optarg, "-n");
+        maxiter = parse_uint(optarg, "-n");
         break;
       case 'f':
         /* read initial points from file */
-        p_file_name = (optarg);
+        p_file_name = optarg;
         break;
       case 'M':
         /* read mask */
         M_opt = 1;
-        p_mask_name = (optarg);
+        p_mask_name = optarg;
         break;
       case 'B':
         /* read mask */
         B_opt = 1;
-        p_blank_name = (optarg);
+        p_blank_name = optarg;
         break;
       case 'V':
         /* verbose opttion */
@@ -385,8 +450,8 @@ int main(int argc, char **argv) {
   if ((argc - optind) != 2)
     usage();
 
-  p_vx_name = (char *)argv[optind];
-  p_vy_name = (char *)argv[optind + 1];
+  p_vx_name = argv[optind];
+  p_vy_name = argv[optind + 1];
 
   /* Order of integration */
   if ((k_opt < 1 && k_opt > 4) || (k_opt == 3)) {
@@ -398,15 +463,12 @@ int main(int argc, char **argv) {
   }
 
   /* u,v output and integration time output at the same time is invalid */
-  if ((t_opt > 0 && l_opt > 0)) {
+  if (t_opt > 0 && l_opt > 0) {
     usage();
   }
 
-  if (b_opt) {
-    dir = -1.0;
-  } else {
-    dir = 1.0;
-  }
+  // set direction (upstream or downstream)
+  dir = (b_opt > 0) ? -1.0 : 1.0;
 
   /* read the grid files */
   err = GRDREAD(p_vx_name, &nx, &ny, &p_x, &p_y, &p_vx);
@@ -417,10 +479,8 @@ int main(int argc, char **argv) {
     ym_inc = p_ym[1] - p_ym[0];
     if (verbose) {
       fprintf(stderr, "Input mask:\n");
-      // fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xm[0], p_xm[nxm - 1], xm_inc, nxm);
       snprintf(msg, sizeof(msg), "xmin: %s xmax: %s x_inc: %s nx: %%lu\n", fmt_f, fmt_f, fmt_f);
       fprintf(stderr, msg, p_xm[0], p_xm[nxm - 1], xm_inc, (unsigned long)nxm);
-      // fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_ym[0], p_ym[nym - 1], ym_inc, nym);
       snprintf(msg, sizeof(msg), "ymin: %s ymax: %s y_inc: %s ny: %%lu\n", fmt_f, fmt_f, fmt_f);
       fprintf(stderr, msg, p_ym[0], p_ym[nym - 1], ym_inc, (unsigned long)nym);
     }
@@ -435,8 +495,8 @@ int main(int argc, char **argv) {
   xmax = p_x[nx - 1];
   ymin = p_y[0];
   ymax = p_y[ny - 1];
-  x_inc = (xmax - xmin) / ((double)(nx - 1));
-  y_inc = (ymax - ymin) / ((double)(ny - 1));
+  x_inc = (xmax - xmin) / (double)(nx - 1);
+  y_inc = (ymax - ymin) / (double)(ny - 1);
 
   /*
    * Blank array: This is the heart of the algorithm. It begins life
@@ -450,8 +510,8 @@ int main(int argc, char **argv) {
 
   blank = (int *)calloc(nby * nbx, sizeof(int));
   /* box spacing */
-  xb_inc = (p_x[nx - 1] - p_x[0]) / ((double)(nbx - 1));
-  yb_inc = (p_y[ny - 1] - p_y[0]) / ((double)(nby - 1));
+  xb_inc = (p_x[nx - 1] - p_x[0]) / (double)(nbx - 1);
+  yb_inc = (p_y[ny - 1] - p_y[0]) / (double)(nby - 1);
 
   p_xc = (double *)calloc(nbx, sizeof(double));
   p_yc = (double *)calloc(nby, sizeof(double));
@@ -512,10 +572,9 @@ int main(int argc, char **argv) {
     if ((fp = fopen(p_file_name, "r")) == NULL) {
       fprintf(stderr, "Cannot open file %s\n", p_file_name);
       return EXIT_FAILURE;
-    } else {
-      if (verbose)
-        fprintf(stderr, "Working on file %s\n", p_file_name);
     }
+    if (verbose)
+      fprintf(stderr, "Working on file %s\n", p_file_name);
   }
 
   while (!feof(fp) && (fgets(line, BUFSIZ, fp) != 0)) {
@@ -534,13 +593,8 @@ int main(int argc, char **argv) {
                   "line %u\n",
                   nlines);
           return EXIT_FAILURE;
-        } else {
-          if (dir < 0.0) {
-            dir = -1.0;
-          } else {
-            dir = 1.0;
-          }
         }
+        dir = (dir < 0.0) ? -1.0 : 1.0;
 
       } else {
         if (2 != sscanf(line, "%lf %lf", &x0, &y0)) {
@@ -549,11 +603,10 @@ int main(int argc, char **argv) {
                   "line %u\n",
                   nlines);
           return EXIT_FAILURE;
-        } else {
-          if (verbose > 1) {
-            snprintf(msg, sizeof(msg), "       x0=%s y0=%s\n", fmt_f, fmt_f);
-            fprintf(stderr, msg, x0, y0);
-          }
+        }
+        if (verbose > 1) {
+          snprintf(msg, sizeof(msg), "       x0=%s y0=%s\n", fmt_f, fmt_f);
+          fprintf(stderr, msg, x0, y0);
         }
       }
 
@@ -599,10 +652,10 @@ int main(int argc, char **argv) {
        * Points at current streamline
        */
       for (iter = 0; iter < maxiter; iter++) {
-        if (iter == 0) {
-          dx0 = dx1 = dx2 = dx3 = 0.0;
-          dy0 = dy1 = dy2 = dy3 = 0.0;
-        }
+        // if (iter == 0) {
+        //   dx0 = dx1 = dx2 = dx3 = 0.0;
+        //   dy0 = dy1 = dy2 = dy3 = 0.0;
+        // }
 
         /*
          * STEP 0 (get initial velocity data at requested point)
@@ -703,7 +756,7 @@ int main(int argc, char **argv) {
         /*
          * check initial guess
          */
-        if ((x0 + dx0 > p_x[nx - 1]) || (x0 + dx0 < p_x[0])) {
+        if (x0 + dx0 > p_x[nx - 1] || x0 + dx0 < p_x[0]) {
           log_break_dx(x0 + dx0, x0, y0);
           if (M_opt) {
             snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
@@ -711,7 +764,7 @@ int main(int argc, char **argv) {
           }
           break;
         }
-        if ((y0 + dy0 > p_y[ny - 1]) || (y0 + dy0 < p_y[0])) {
+        if (y0 + dy0 > p_y[ny - 1] || y0 + dy0 < p_y[0]) {
           log_break_dy(y0 + dy0, x0, y0);
           if (M_opt) {
             snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
@@ -763,8 +816,6 @@ int main(int argc, char **argv) {
         dx1 = dir * delta * vxi / uv;
         dy1 = dir * delta * vyi / uv;
         if (verbose > 2) {
-          // fprintf(stderr, "#\tRK1: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n", xt, yt, vxi, vyi, dx1,
-          // dy1);
           snprintf(msg, sizeof(msg), "#\tRK1: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
                    fmt_f, fmt_f);
           fprintf(stderr, msg, xt, yt, vxi, vyi, dx1, dy1);
@@ -795,8 +846,6 @@ int main(int argc, char **argv) {
         dx2 = dir * delta * vxi / uv;
         dy2 = dir * delta * vyi / uv;
         if (verbose > 2) {
-          // fprintf(stderr, "#\tRK2: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n", xt, yt, vxi, vyi, dx1,
-          // dy1);
           snprintf(msg, sizeof(msg), "#\tRK2: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
                    fmt_f, fmt_f);
           fprintf(stderr, msg, xt, yt, vxi, vyi, dx2, dy2);
@@ -827,8 +876,6 @@ int main(int argc, char **argv) {
         dx3 = dir * delta * vxi / uv;
         dy3 = dir * delta * vyi / uv;
         if (verbose > 2) {
-          // fprintf(stderr, "#\tRK3: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n", xt, yt, vxi, vyi, dx3,
-          // dy3);
           snprintf(msg, sizeof(msg), "#\tRK3: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
                    fmt_f, fmt_f);
           fprintf(stderr, msg, xt, yt, vxi, vyi, dx3, dy3);
@@ -860,6 +907,7 @@ int main(int argc, char **argv) {
           break;
         }
 
+        /* final update of position */
         xi += dx;
         yi += dy;
 
@@ -984,9 +1032,9 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   size_t ixel = 0, iyel = 0;   /* where we are */
   size_t ixel1 = 0, iyel1 = 0; /* the next */
   size_t i00, i01, i10, i11;
-  double p1 = 0.0, p2 = 0.0, q1 = 0.0, q2 = 0.0;
-  double xinc = 0.0, yinc = 0.0;
-  double xerr = 0.0, yerr = 0.0;
+  double p1, p2, q1, q2;
+  double xinc, yinc;
+  double xerr, yerr;
 
   debug_printf(DEBUG_INFO, "search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n", xi, 0, p_x[0], nx - 1,
                p_x[nx - 1]);
@@ -1121,7 +1169,7 @@ void usage(void) {
           "  -V                  verbose output\n"
           "  -r                  report why a streamline stopped to stderr "
           "(default: off)\n"
-          "  -F fmt_f            format for coorinates (default: %s)\n"
+          "  -F fmt_f            format for coordinates (default: %s)\n"
           "  -G fmt_g            format for data (default: %s)\n"
           "  -v                  version\n"
           "  -h                  help\n\n",
