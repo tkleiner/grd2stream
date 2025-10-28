@@ -5,6 +5,19 @@ ACLOCAL_AMFLAGS  = -I m4
 AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = m4 src example
+EXTRA_DIST = git_version.sh git_version.h
+
+if BUILD_FROM_GIT
+BUILT_SOURCES = git_version.h
+CLEANFILES = git_version.h
+endif
+
+all dist: git_version.h
+git_version.h:
+	@echo "Updating git_version.h from Git..."
+	@$(top_srcdir)/git_version.sh
+
+
 
 
 ##
@@ -28,16 +41,3 @@ maintainer-check:
 	./configure --enable-gmt-api  && $(MAKE) clean && $(MAKE)
 	./configure --disable-gmt-api && $(MAKE) clean && $(MAKE)
 
-# # Get git commit version and date
-# # found on
-# # https://stackoverflow.com/questions/1704907/how-can-i-get-my-c-code-to-automatically-print-out-its-git-version-hash
-# GIT_VERSION := $(shell git --no-pager describe --tags --always --dirty)
-# GIT_DATE := $(firstword $(shell git --no-pager show --date=short --format="%ad" --name-only))
-#
-#  # recompile version.h dependants when GIT_VERSION changes, uses temporary file version~
-# .PHONY: force
-# git_version~: force
-# 	@echo '$(GIT_VERSION) $(GIT_DATE)' | cmp -s - $@ || echo '$(GIT_VERSION) $(GIT_DATE)' > $@
-# git_version.h: git_version~
-# 	@touch $@
-# 	@echo Git version $(GIT_VERSION) $(GIT_DATE)
