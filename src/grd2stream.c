@@ -24,13 +24,15 @@
 #ifndef PACKAGE_NAME
 #define PACKAGE_NAME "grd2stream"
 #endif
+#include <ctype.h>
 #include <math.h>
 #include <netcdf.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "getopt.h"
 #include "debug_printf.h"
+#include "getopt.h"
 #include "grdio.h"
 #include "log.h"
 
@@ -78,67 +80,113 @@ static void version(void);
 int verbose = 0;
 int log_breaks = 0;
 
+// Global format strings with defaults
+const char *fmt_f = "%.3f";  // for coordinates
+const char *fmt_g = "%.3g";  // for other quantities
+char msg[256];               // contains fprintf/printf string with formats
+
+// Accepts formats containing '%' and one of 'f', 'e', or 'g'
+static int is_valid_float_format(const char *fmt) {
+  if (!fmt || !strchr(fmt, '%'))
+    return 0;
+  // Check for at least one type specifier
+  const char *types = "fegEG";
+  for (const char *p = types; *p; ++p) {
+    if (strchr(fmt, *p))
+      return 1;
+  }
+  return 0;
+}
+
+// Set float format (coordinates, general floats)
+void set_float_format(const char *fmt) {
+  if (is_valid_float_format(fmt)) {
+    fmt_f = fmt;
+  } else {
+    fprintf(stderr, "Warning: invalid float format '%s'. Using default '%s'.\n", fmt, fmt_f);
+  }
+}
+
+// Set general format (velocities, general numbers)
+void set_general_format(const char *fmt) {
+  if (is_valid_float_format(fmt)) {
+    fmt_g = fmt;
+  } else {
+    fprintf(stderr, "Warning: invalid general format '%s'. Using default '%s'.\n", fmt, fmt_g);
+  }
+}
+
+// Log messages
 void log_break_nan(double x, double y, double x0, double y0) {
   if (log_breaks) {
-    fprintf(stderr,
-            "Stop: NaN found for velocity vx or vy at position (%.3f, %.3f) "
-            "for seed (%.3f, %.3f).\n",
-            x, y, x0, y0);
+    snprintf(msg, sizeof(msg),
+             "Stop: NaN found for velocity vx or vy at position (%s, %s) "
+             "for seed (%s, %s).\n",
+             fmt_f, fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, x, y, x0, y0);
   }
 }
 
 void log_break_zero(double x, double y, double x0, double y0) {
   if (log_breaks) {
-    fprintf(stderr,
-            "Stop: Zero velocity magnitude found at position (%.3f, %.3f) "
-            "for seed (%.3f, %.3f).\n",
-            x, y, x0, y0);
+    snprintf(msg, sizeof(msg),
+             "Stop: Zero velocity magnitude found at position (%s, %s) "
+             "for seed (%s, %s).\n",
+             fmt_f, fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, x, y, x0, y0);
   }
 }
 
 void log_break_dx(double x, double x0, double y0) {
   if (log_breaks) {
-    fprintf(stderr,
-            "Stop: Estimated x + dx (%.3f) is outside valid region for seed "
-            "(%.3f, %.3f).\n",
-            x, x0, y0);
+    snprintf(msg, sizeof(msg),
+             "Stop: Estimated x + dx (%s) is outside valid region for seed "
+             "(%s, %s).\n",
+             fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, x, x0, y0);
   }
 }
 
 void log_break_dy(double y, double x0, double y0) {
   if (log_breaks) {
-    fprintf(stderr,
-            "Stop: Estimated y + dy (%.3f) is outside valid region for seed "
-            "(%.3f, %.3f).\n",
-            y, x0, y0);
+    snprintf(msg, sizeof(msg),
+             "Stop: Estimated y + dy (%s) is outside valid region for seed "
+             "(%s, %s).\n",
+             fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, y, x0, y0);
   }
 }
 
 void log_break_stepsize(double stpsz, double xinc, double yinc, double x0, double y0) {
   if (log_breaks) {
-    fprintf(stderr, "Stop: Step size to small %.3f << (%.3f,%.3f) for seed (%.3f, %.3f)\n", stpsz, xinc, yinc, x0, y0);
+    snprintf(msg, sizeof(msg), "Stop: Step size too small %s << (%s, %s) for seed (%s, %s)\n", fmt_f, fmt_f, fmt_f,
+             fmt_f, fmt_f);
+    fprintf(stderr, msg, stpsz, xinc, yinc, x0, y0);
   }
 }
 
 void log_break_maxiter(double x0, double y0) {
   if (log_breaks) {
-    fprintf(stderr, "Stop: Maximum number of iterations reached for seed (%.3f, %.3f)\n", x0, y0);
+    snprintf(msg, sizeof(msg), "Stop: Maximum number of iterations reached for seed (%s, %s)\n", fmt_f, fmt_f);
+    fprintf(stderr, msg, x0, y0);
   }
 }
 
 void log_break_maxtime(double x0, double y0, unsigned long iter) {
   if (log_breaks) {
-    fprintf(stderr,
-            "Stop: Maximum integration time reached for seed (%.3f, %.3f) "
-            "after %u iterations\n",
-            x0, y0, (unsigned int)iter);
+    snprintf(msg, sizeof(msg),
+             "Stop: Maximum integration time reached for seed (%s, %s) "
+             "after %%u iterations\n",
+             fmt_f, fmt_f);
+    fprintf(stderr, msg, x0, y0, (unsigned int)iter);
   }
 }
 
 void log_break_delta(double x0, double y0, unsigned long iter, double delta) {
   if (log_breaks) {
-    fprintf(stderr, "Stop: Invalid delta = %f for seed (%.3f, %.3f) after %u iterations\n", delta, x0, y0,
-            (unsigned int)iter);
+    snprintf(msg, sizeof(msg), "Stop: Invalid delta = %s for seed (%s, %s) after %%u iterations\n", fmt_g, fmt_f,
+             fmt_f);
+    fprintf(stderr, msg, delta, x0, y0, (unsigned int)iter);
   }
 }
 
@@ -151,9 +199,14 @@ void test_locate(void) {
 
   for (int i = 0; i < sizeof(xiv) / sizeof(double); i++) {
     xi = xiv[i];
-    printf("search xi = %.3f in x[0] = %.3f < xi < x[%lu] = %.3f\n", xi, xv[0], nx - 1, xv[nx - 1]);
+    // printf("search xi = %.3f in x[0] = %.3f < xi < x[%lu] = %.3f\n", xi, xv[0], nx - 1, xv[nx - 1]);
+    snprintf(msg, sizeof(msg), "search xi = %s in x[0] = %s < xi < x[%%lu] = %s\n", fmt_f, fmt_f, fmt_f);
+    printf(msg, xi, xv[0], (unsigned long)(nx - 1), xv[nx - 1]);
+
     locate(xv, nx, xi, &ixel);
-    printf("found xi = %.3f -> x[%lu] = %.3f\n", xi, ixel, xv[ixel]);
+    // printf("found xi = %.3f -> x[%lu] = %.3f\n", xi, ixel, xv[ixel]);
+    snprintf(msg, sizeof(msg), "found xi = %s -> x[%%lu] = %s\n", fmt_f, fmt_f);
+    printf(msg, xi, (unsigned long)ixel, xv[ixel]);
   }
 }
 
@@ -179,12 +232,12 @@ int main(int argc, char **argv) {
   double dx = 0.0, dy = 0.0; /* local error */
   double lim = 0.0;
 
-  double itime;                                     /* stream-line integration time in time units given by thge
-                                                       velocity field */
-  double maxtime;                                   /* same units as itime, less equal zero indicates an error */
-  double dist, dout, delta, delta_initial;          /* unit m ???*/
-  double dir = 1.0;                                 /* direction (1.. forward, -1..backward) */
-  unsigned int freq = 2;                            /* default freq = 2 samples per grid cell */
+  double itime;                            /* stream-line integration time in time units given by thge
+                                              velocity field */
+  double maxtime;                          /* same units as itime, less equal zero indicates an error */
+  double dist, dout, delta, delta_initial; /* unit m ???*/
+  double dir = 1.0;                        /* direction (1.. forward, -1..backward) */
+  unsigned int freq = 2;                   /* default freq = 2 samples per grid cell */
 
   double *p_x = NULL;
   double *p_y = NULL;
@@ -240,9 +293,8 @@ int main(int argc, char **argv) {
   (void)log_set_debug(DEBUG_TRACE_NONE); /* or DEBUG_TRACE_ALL,... */
 #endif
 
-
   /* parse commandline args */
-  while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:e:")) != -1)
+  while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:e:F:G:")) != -1)
     switch (oc) {
       case 'e':
         eps = (double)atof(optarg);
@@ -276,6 +328,14 @@ int main(int argc, char **argv) {
         /* output step size */
         d_opt = 1;
         dout = (double)atof(optarg);
+        break;
+      case 'F':
+        /* float format */
+        set_float_format(optarg);
+        break;
+      case 'G':
+        /* data format */
+        set_general_format(optarg);
         break;
       case 'h':
         /* help */
@@ -357,8 +417,12 @@ int main(int argc, char **argv) {
     ym_inc = p_ym[1] - p_ym[0];
     if (verbose) {
       fprintf(stderr, "Input mask:\n");
-      fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xm[0], p_xm[nxm - 1], xm_inc, nxm);
-      fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_ym[0], p_ym[nym - 1], ym_inc, nym);
+      // fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xm[0], p_xm[nxm - 1], xm_inc, nxm);
+      snprintf(msg, sizeof(msg), "xmin: %s xmax: %s x_inc: %s nx: %%lu\n", fmt_f, fmt_f, fmt_f);
+      fprintf(stderr, msg, p_xm[0], p_xm[nxm - 1], xm_inc, (unsigned long)nxm);
+      // fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_ym[0], p_ym[nym - 1], ym_inc, nym);
+      snprintf(msg, sizeof(msg), "ymin: %s ymax: %s y_inc: %s ny: %%lu\n", fmt_f, fmt_f, fmt_f);
+      fprintf(stderr, msg, p_ym[0], p_ym[nym - 1], ym_inc, (unsigned long)nym);
     }
   }
   if (err != 0) {
@@ -418,20 +482,26 @@ int main(int argc, char **argv) {
 
   if (verbose) {
     fprintf(stderr, "Input:\n");
-    fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", xmin, xmax, x_inc, nx);
-    fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", ymin, ymax, y_inc, ny);
-    fprintf(stderr, "d_out: %.3f d_inc: %.3f RK: %d freq: %u\n", dout, delta_initial, k_opt, freq);
+    snprintf(msg, sizeof(msg), "xmin: %s xmax: %s x_inc: %s nx: %%lu\n", fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, xmin, xmax, x_inc, nx);
+    snprintf(msg, sizeof(msg), "ymin: %s ymax: %s y_inc: %s ny: %%lu\n", fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, ymin, ymax, y_inc, ny);
+    snprintf(msg, sizeof(msg), "d_out: %s d_inc: %s RK: %%d freq: %%u\n", fmt_f, fmt_f);
+    fprintf(stderr, msg, dout, delta_initial, k_opt, freq);
     fprintf(stderr, "verbose: %u\n", verbose);
   }
 
   if (verbose > 1) {
     fprintf(stderr, "Coarse grid:\n");
-    fprintf(stderr, "xmin: %.3f xmax: %.3f x_inc: %f nx: %lu\n", p_xc[0], p_xc[nbx - 1], xb_inc, nbx);
-    fprintf(stderr, "ymin: %.3f ymax: %.3f y_inc: %f ny: %lu\n", p_yc[0], p_yc[nby - 1], yb_inc, nby);
+    snprintf(msg, sizeof(msg), "xmin: %s xmax: %s x_inc: %s nx: %%lu\n", fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, p_xc[0], p_xc[nbx - 1], xb_inc, nbx);
+    snprintf(msg, sizeof(msg), "ymin: %s ymax: %s y_inc: %s ny: %%lu\n", fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, p_yc[0], p_yc[nby - 1], yb_inc, nby);
   }
 
   if ((delta_initial > x_inc) || (delta_initial > y_inc)) {
-    fprintf(stderr, "WARN: Step size to large: %.3f > (%.3f, %.3f)\n", delta_initial, x_inc, y_inc);
+    snprintf(msg, sizeof(msg), "WARN: Step size too large: %s > (%s, %s)\n", fmt_f, fmt_f, fmt_f);
+    fprintf(stderr, msg, delta_initial, x_inc, y_inc);
   }
 
   if (p_file_name == NULL) { /* Just read standard input */
@@ -481,7 +551,8 @@ int main(int argc, char **argv) {
           return EXIT_FAILURE;
         } else {
           if (verbose > 1) {
-            fprintf(stderr, "       x0=%.3f y0=%.3f\n", x0, y0);
+            snprintf(msg, sizeof(msg), "       x0=%s y0=%s\n", fmt_f, fmt_f);
+            fprintf(stderr, msg, x0, y0);
           }
         }
       }
@@ -494,10 +565,11 @@ int main(int argc, char **argv) {
 
       if ((x0 > p_x[nx - 1]) || (y0 > p_y[ny - 1]) || (x0 < p_x[0]) || (y0 < p_y[0])) {
         if (log_breaks) {
-          fprintf(stderr,
-                  "Stop: Seed (%.3f, %.3f) is outside valid region "
-                  "(xmin=%.3f, xmax=%.3f, ymin=%.3f, ymax=%.3f)!\n",
-                  x0, y0, p_x[0], p_x[nx - 1], p_y[0], p_y[ny - 1]);
+          snprintf(msg, sizeof(msg),
+                   "Stop: Seed (%s, %s) is outside valid region "
+                   "(xmin=%s, xmax=%s, ymin=%s, ymax=%s)!\n",
+                   fmt_f, fmt_f, fmt_f, fmt_f, fmt_f, fmt_f);
+          fprintf(stderr, msg, x0, y0, p_x[0], p_x[nx - 1], p_y[0], p_y[ny - 1]);
         }
         continue; /* continue with next point in file */
       }
@@ -512,7 +584,7 @@ int main(int argc, char **argv) {
       }
 
       npoly++;
-      printf(">\n# @D\"streamline %u\"|%u\n", npoly,npoly);
+      printf(">\n# @D\"streamline %u\"|%u\n", npoly, npoly);
 
       dist = 0.0;
       itime = 0.0;
@@ -537,7 +609,8 @@ int main(int argc, char **argv) {
          */
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi, eps);
         if (verbose > 1) {
-          fprintf(stderr, "#S: x = %.3f, y = %.3f, vx = %.3e, vy = %.3e\n", xi, yi, vxi, vyi);
+          snprintf(msg, sizeof(msg), "#S: x = %s, y = %s, vx = %s, vy = %s\n", fmt_f, fmt_f, fmt_g, fmt_g);
+          fprintf(stderr, msg, xi, yi, vxi, vyi);
         }
 
         /* check if mask reached */
@@ -550,13 +623,17 @@ int main(int argc, char **argv) {
         /* this is the output */
         if (!(iter % freq)) {
           if (l_opt) {
-            printf("%.3f %.3f %.3f %.3g %.3g\n", xi, yi, dist, vxi, vyi);
+            snprintf(msg, sizeof(msg), "%s %s %s %s %s\n", fmt_f, fmt_f, fmt_f, fmt_g, fmt_g);
+            printf(msg, xi, yi, dist, vxi, vyi);
           } else if (t_opt) {
-            printf("%.3f %.3f %.3f %.3g %.3g %.3f\n", xi, yi, dist, vxi, vyi, itime);
+            snprintf(msg, sizeof(msg), "%s %s %s %s %s %s\n", fmt_f, fmt_f, fmt_f, fmt_g, fmt_g, fmt_f);
+            printf(msg, xi, yi, dist, vxi, vyi, itime);
           } else if (M_opt > 0) {
-            printf("%.3f %.3f %.3f %.3f\n", xi, yi, dist, mask_val);
+            snprintf(msg, sizeof(msg), "%s %s %s %s\n", fmt_f, fmt_f, fmt_f, fmt_f);
+            printf(msg, xi, yi, dist, mask_val);
           } else {
-            printf("%.3f %.3f %.3f\n", xi, yi, dist);
+            snprintf(msg, sizeof(msg), "%s %s %s\n", fmt_f, fmt_f, fmt_f);
+            printf(msg, xi, yi, dist);
           }
         }
 
@@ -571,14 +648,18 @@ int main(int argc, char **argv) {
 
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xi, yi, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xi, yi, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
 
@@ -591,11 +672,15 @@ int main(int argc, char **argv) {
              * new_dt = dt - time_excess = delta/uv - time_excess
              * new_delta = new_dt * uv
              */
-            if (verbose)
-              printf("#T# reducing delta = %.3g ", delta);
+            if (verbose) {
+              snprintf(msg, sizeof(msg), "#T# reducing delta = %s ", fmt_g);
+              printf(msg, delta);
+            }
             delta = (delta / uv - time_excess) * uv;
-            if (verbose)
-              printf(" -> %.3f to match maxtime = %g \n", delta, maxtime);
+            if (verbose) {
+              snprintf(msg, sizeof(msg), " -> %s to match maxtime = %s \n", fmt_f, fmt_g);
+              printf(msg, delta, maxtime);
+            }
           } else if (time_excess < 0.0) {
             /* regular time step required */
           } else {
@@ -620,19 +705,24 @@ int main(int argc, char **argv) {
          */
         if ((x0 + dx0 > p_x[nx - 1]) || (x0 + dx0 < p_x[0])) {
           log_break_dx(x0 + dx0, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         if ((y0 + dy0 > p_y[ny - 1]) || (y0 + dy0 < p_y[0])) {
           log_break_dy(y0 + dy0, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         if (verbose > 2) {
-          fprintf(stderr, "#\tRK0: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
-                  xi, yi, vxi, vyi, dx0, dy0);
+          snprintf(msg, sizeof(msg), "#\tRK0: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
+                   fmt_f, fmt_f);
+          fprintf(stderr, msg, xi, yi, vxi, vyi, dx0, dy0);
         }
 
         /*  check stepsize  */
@@ -656,21 +746,28 @@ int main(int argc, char **argv) {
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xt, yt, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         dx1 = dir * delta * vxi / uv;
         dy1 = dir * delta * vyi / uv;
         if (verbose > 2) {
-          fprintf(stderr, "#\tRK1: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
-                  xt, yt, vxi, vyi, dx1, dy1);
+          // fprintf(stderr, "#\tRK1: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n", xt, yt, vxi, vyi, dx1,
+          // dy1);
+          snprintf(msg, sizeof(msg), "#\tRK1: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
+                   fmt_f, fmt_f);
+          fprintf(stderr, msg, xt, yt, vxi, vyi, dx1, dy1);
         }
 
         /*
@@ -681,21 +778,28 @@ int main(int argc, char **argv) {
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xt, yt, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         dx2 = dir * delta * vxi / uv;
         dy2 = dir * delta * vyi / uv;
         if (verbose > 2) {
-          fprintf(stderr, "#\tRK2: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
-                  xt, yt, vxi, vyi, dx1, dy1);
+          // fprintf(stderr, "#\tRK2: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n", xt, yt, vxi, vyi, dx1,
+          // dy1);
+          snprintf(msg, sizeof(msg), "#\tRK2: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
+                   fmt_f, fmt_f);
+          fprintf(stderr, msg, xt, yt, vxi, vyi, dx2, dy2);
         }
 
         /*
@@ -706,23 +810,29 @@ int main(int argc, char **argv) {
         (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
           log_break_zero(xt, yt, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         dx3 = dir * delta * vxi / uv;
         dy3 = dir * delta * vyi / uv;
         if (verbose > 2) {
-          fprintf(stderr, "#\tRK3: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n",
-                  xt, yt, vxi, vyi, dx3, dy3);
+          // fprintf(stderr, "#\tRK3: x=%.3f, y=%.3f, vx = %.3e, vy=%.3e, dx=%.5f, dy=%.5f\n", xt, yt, vxi, vyi, dx3,
+          // dy3);
+          snprintf(msg, sizeof(msg), "#\tRK3: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
+                   fmt_f, fmt_f);
+          fprintf(stderr, msg, xt, yt, vxi, vyi, dx3, dy3);
         }
-
 
         /*
          * final RK-STEP update
@@ -735,14 +845,18 @@ int main(int argc, char **argv) {
          */
         if ((xi + dx > p_x[nx - 1]) || (xi + dx < p_x[0])) {
           log_break_dx(xi + dx, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
         if ((yi + dy > p_y[ny - 1]) || (yi + dy < p_y[0])) {
           log_break_dy(yi + dy, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
 
@@ -764,41 +878,33 @@ int main(int argc, char **argv) {
          * START TESTING HERE
          */
 
-#if 0        
+#if 0
         if (verbose) {
-          
-          fprintf(stderr," xi=%15.5f yi=%15.5f\n",xi,yi);
-          fprintf(stderr," ib=%d jb=%d\n",ib,jb);
-          fprintf(stderr," xb=%15.5f yb=%15.5f\n",p_xc[ib],p_yc[jb]);
-
+          fprintf(stderr, " xi=%15.5f yi=%15.5f\n", xi, yi);
+          fprintf(stderr, " ib=%d jb=%d\n", ib, jb);
+          fprintf(stderr, " xb=%15.5f yb=%15.5f\n", p_xc[ib], p_yc[jb]);
         }
 
-        
-        
         if (D_opt) {
-          
-          if (ib <0 || ib > nbx-1) {
-            fprintf(stdout,"# error: %lu %lu %f\n",ib,nbx,(xi - p_x[0]));
+          if (ib < 0 || ib > nbx - 1) {
+            fprintf(stdout, "# error: %lu %lu %f\n", ib, nbx, (xi - p_x[0]));
             break;
           }
-          if (jb <0 || jb > nby-1) {
-            fprintf(stdout,"# error: %lu %lu %f\n",ib,nby,(yi - p_y[0]));
+          if (jb < 0 || jb > nby - 1) {
+            fprintf(stdout, "# error: %lu %lu %f\n", ib, nby, (yi - p_y[0]));
             break;
           }
-          
-          if ( (blank[jb*nbx + ib] > 0) && (blank[jb*nbx + ib] != npoly)) {
-            
+
+          if ((blank[jb * nbx + ib] > 0) && (blank[jb * nbx + ib] != npoly)) {
             if (verbose) {
-              fprintf(stdout,"# blank: %lu %lu %d\n",
-                      ib,jb, blank[jb*nbx + ib]);
-              fprintf(stdout,"# Stop: x = %.3f, y = %.3f allready visited by %d\n",
-                      xi,yi,(int)blank[jb*nbx + ib]);
-              
+              fprintf(stdout, "# blank: %lu %lu %d\n", ib, jb, blank[jb * nbx + ib]);
+              snprintf(msg, sizeof(msg), "# Stop: x = %s, y = %s already visited by %%d\n", fmt_f, fmt_f);
+              fprintf(stdout, msg, xi, yi, id);
             }
             break;
-            
+
           } else {
-            blank[jb*nbx + ib] = npoly;
+            blank[jb * nbx + ib] = npoly;
           }
         }
 #endif
@@ -806,26 +912,27 @@ int main(int argc, char **argv) {
          * END TESTING HERE
          */
         if (verbose > 1) {
-          fprintf(stderr, "#E: x = %.3f, y = %.3f, dx = %.3f, dy = %.3f\n", xi, yi, dx, dy);
+          snprintf(msg, sizeof(msg), "#E: x = %s, y = %s, dx = %s, dy = %s\n", fmt_f, fmt_f, fmt_f, fmt_f);
+          fprintf(fp, msg, xi, yi, dx, dy);
         }
 
         lim = sqrt(dx * dx + dy * dy);
         if (lim * 1000.0 < (MIN(x_inc, y_inc))) {
           log_break_stepsize(lim, x_inc, y_inc, x0, y0);
-          if (M_opt)
-            printf("#M# %.3f %.3f NaN\n", x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
           break;
         }
       }
       /* end of work for one streamline */
       if (iter == maxiter) {
         log_break_maxiter(x0, y0);
-        if (M_opt)
-          printf("#M# %.3f %.3f NaN\n", x0, y0);
-        /* if (M_opt) { */
-        /*   fprintf(stderr,"#ERROR: maxiter reached for x0 = %.3f, y0 = %.3f
-         * without reaching the mask\n", x0,y0); */
-        /* } */
+        if (M_opt) {
+          snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+          printf(msg, x0, y0);
+        }
       }
     }
   }
@@ -1014,9 +1121,11 @@ void usage(void) {
           "  -V                  verbose output\n"
           "  -r                  report why a streamline stopped to stderr "
           "(default: off)\n"
+          "  -F fmt_f            format for coorinates (default: %s)\n"
+          "  -G fmt_g            format for data (default: %s)\n"
           "  -v                  version\n"
           "  -h                  help\n\n",
-          MAXSTEPS);
+          MAXSTEPS, fmt_f, fmt_g);
   fprintf(stderr,
           "\nDESCRIPTION:\n"
           "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
