@@ -749,8 +749,8 @@ int main(int argc, char **argv) {
 
         /* advance now */
         dist += (delta * dir);
-        dx0 = dir * delta * vxi / uv; /* if vxi > && dir <= 0, then dx0 is already negative */
-        dy0 = dir * delta * vyi / uv; /* if vyi > && dir <= 0, then dy0 is already negative */
+        dx0 = dir * delta * vxi / uv; /* if vxi > 0 && dir <= 0, then dx0 is already negative */
+        dy0 = dir * delta * vyi / uv; /* if vyi > 0 && dir <= 0, then dy0 is already negative */
         itime += delta / uv;
 
         /*
@@ -883,6 +883,8 @@ int main(int argc, char **argv) {
 
         /*
          * final RK-STEP update
+         * x_{n+1} = x_{n} + h/6 (k_1 + 2*k_2 + 2*k_3 + k_4)
+         *         = x_{n} + dx
          */
         dx = (dx0 / 6.0 + dx1 / 3.0 + dx2 / 3.0 + dx3 / 6.0);
         dy = (dy0 / 6.0 + dy1 / 3.0 + dy2 / 3.0 + dy3 / 6.0);
