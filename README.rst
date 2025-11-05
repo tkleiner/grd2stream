@@ -90,6 +90,71 @@ Build grd2stream-X.X.X.tar.gz e.g. by
   make && make dist
 
 
+Streamline Computation
+----------------------
+
+A streamline in a 2D steady velocity field :math:`\mathbf{v}(x, y) = (v_x(x, y), v_y(x, y))`
+is a curve :math:`\mathbf{s}(t) = (x(t), y(t))` that satisfies the ordinary differential
+equation (ODE):
+
+.. math::
+
+    \frac{d\mathbf{s}}{dt} = \mathbf{v}(\mathbf{s}(t)) =
+    (v_x(x(t), y(t)), v_y(x(t), y(t)))
+
+with initial condition:
+
+.. math::
+
+    \mathbf{s}(t_0) = \mathbf{s}_0 = (x_0, y_0)
+
+Here, :math:`t` is a parametric variable along the streamline.
+
+Fourth-order Runge–Kutta (RK4) Integration
+------------------------------------------
+
+To numerically approximate :math:`\mathbf{s}(t)`, the classical 4th-order Runge–Kutta
+scheme with fixed step size :math:`h > 0` is used.
+
+Given :math:`\mathbf{s}_i = (x_i, y_i)` at step :math:`i`, the next point
+:math:`\mathbf{s}_{i+1}` is computed as:
+
+.. math::
+
+    \mathbf{k}_1 &= \mathbf{v}\left(\mathbf{s}_i\right), \\
+    \mathbf{k}_2 &= \mathbf{v}\left(\mathbf{s}_i + \frac{h}{2}\mathbf{k}_1\right), \\
+    \mathbf{k}_3 &= \mathbf{v}\left(\mathbf{s}_i + \frac{h}{2}\mathbf{k}_2\right), \\
+    \mathbf{k}_4 &= \mathbf{v}\left(\mathbf{s}_i + h\,\mathbf{k}_3\right), \\
+    \mathbf{s}_{i+1} &= \mathbf{s}_i + \frac{h}{6}\left(\mathbf{k}_1 + 2\mathbf{k}_2 + 2\mathbf{k}_3 + \mathbf{k}_4\right) = \mathbf{s}_i + \mathbf{\delta}_i
+
+Component-wise, this can be written explicitly as:
+
+.. math::
+
+    k_{1x} &= v_x(x_i, y_i), & k_{1y} &= v_y(x_i, y_i), \\
+    k_{2x} &= v_x(x_i + \frac{h}{2}k_{1x}, y_i + \frac{h}{2}k_{1y}), &
+    k_{2y} &= v_y(x_i + \frac{h}{2}k_{1x}, y_i + \frac{h}{2}k_{1y}), \\
+    k_{3x} &= v_x(x_i + \frac{h}{2}k_{2x}, y_i + \frac{h}{2}k_{2y}), &
+    k_{3y} &= v_y(x_i + \frac{h}{2}k_{2x}, y_i + \frac{h}{2}k_{2y}), \\
+    k_{4x} &= v_x(x_i + h k_{3x}, y_n + h k_{3y}), &
+    k_{4y} &= v_y(x_i + h k_{3x}, y_n + h k_{3y}), \\
+    x_{i+1} &= x_i + \frac{h}{6}(k_{1x} + 2 k_{2x} + 2 k_{3x} + k_{4x}) = x_i + dx_i, \\
+    y_{i+1} &= y_i + \frac{h}{6}(k_{1y} + 2 k_{2y} + 2 k_{3y} + k_{4y}) = y_i + dy_i
+
+
+Termination Criteria
+--------------------
+
+The integration of a streamline continues until one of the following
+conditions is met:
+
+- The number of integration steps exceeds a preset maximum :math:`N_{\max}`.
+- The streamline point leaves the computational domain.
+- The velocity magnitude :math:`|\mathbf{v}(x, y)|` becomes smaller than a threshold,
+  indicating a stagnation point.
+
+
+
 Contribute
 ----------
 
