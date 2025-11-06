@@ -288,8 +288,8 @@ int main(int argc, char **argv) {
   double yt, xt;
   double vxi = 0.0, vyi = 0.0, uv; /* vx, vy and magnitude of velocity */
 
-  double dx0, dx1, dx2, dx3 = 0.0;
-  double dy0, dy1, dy2, dy3 = 0.0;
+  double dx1, dx2, dx3, dx4 = 0.0;
+  double dy1, dy2, dy3, dy4 = 0.0;
   double dx, dy;
   double ex = 0.0, ey = 0.0; /* local error */
 
@@ -652,15 +652,11 @@ int main(int argc, char **argv) {
        * Points at current streamline
        */
       for (iter = 0; iter < maxiter; iter++) {
-        // if (iter == 0) {
-        //   dx0 = dx1 = dx2 = dx3 = 0.0;
-        //   dy0 = dy1 = dy2 = dy3 = 0.0;
-        // }
 
         /*
-         * STEP 0 (get initial velocity data at requested point)
+         * STEP 1 (get initial velocity data at requested point)
          */
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi, eps);
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi, eps); // (k1x, k1y)
         if (verbose > 1) {
           snprintf(msg, sizeof(msg), "#S: x = %s, y = %s, vx = %s, vy = %s\n", fmt_f, fmt_f, fmt_g, fmt_g);
           fprintf(stderr, msg, xi, yi, vxi, vyi);
@@ -749,23 +745,23 @@ int main(int argc, char **argv) {
 
         /* advance now */
         dist += (delta * dir);
-        dx0 = dir * delta * vxi / uv; /* if vxi > 0 && dir <= 0, then dx0 is already negative */
-        dy0 = dir * delta * vyi / uv; /* if vyi > 0 && dir <= 0, then dy0 is already negative */
+        dx1 = dir * delta * vxi / uv; /* if vxi > 0 && dir <= 0, then dx0 is already negative */
+        dy1 = dir * delta * vyi / uv; /* if vyi > 0 && dir <= 0, then dy0 is already negative */
         itime += delta / uv;
 
         /*
          * check initial guess
          */
-        if (x0 + dx0 > p_x[nx - 1] || x0 + dx0 < p_x[0]) {
-          log_break_dx(x0 + dx0, x0, y0);
+        if (x0 + dx1 > p_x[nx - 1] || x0 + dx1 < p_x[0]) {
+          log_break_dx(x0 + dx1, x0, y0);
           if (M_opt) {
             snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
             printf(msg, x0, y0);
           }
           break;
         }
-        if (y0 + dy0 > p_y[ny - 1] || y0 + dy0 < p_y[0]) {
-          log_break_dy(y0 + dy0, x0, y0);
+        if (y0 + dy1 > p_y[ny - 1] || y0 + dy1 < p_y[0]) {
+          log_break_dy(y0 + dy1, x0, y0);
           if (M_opt) {
             snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
             printf(msg, x0, y0);
@@ -773,52 +769,22 @@ int main(int argc, char **argv) {
           break;
         }
         if (verbose > 2) {
-          snprintf(msg, sizeof(msg), "#\tRK0: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
+          snprintf(msg, sizeof(msg), "#\tRK1: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
                    fmt_f, fmt_f);
-          fprintf(stderr, msg, xi, yi, vxi, vyi, dx0, dy0);
+          fprintf(stderr, msg, xi, yi, vxi, vyi, dx1, dy1);
         }
 
         /*  check stepsize  */
         if (iter > 0 && k_opt == 4) {
-          ex = dx3 / 6.0 - vxi * delta / 6.0;
-          ey = dy3 / 6.0 - vyi * delta / 6.0;
+          ex = dx4 / 6.0 - vxi * delta / 6.0;
+          ey = dy4 / 6.0 - vyi * delta / 6.0;
         }
 
         /* early break for Euler method. Continue with next i */
         if (k_opt == 1) {
-          xi += dx0;
-          yi += dy0;
+          xi += dx1;
+          yi += dy1;
           continue;
-        }
-
-        /*
-         * RK-STEP 1
-         */
-        xt = xi + dx0 / 2.0;
-        yt = yi + dy0 / 2.0;
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
-        if (isnan(vxi) || isnan(vyi)) {
-          log_break_nan(xt, yt, x0, y0);
-          if (M_opt) {
-            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
-            printf(msg, x0, y0);
-          }
-          break;
-        }
-        if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
-          log_break_zero(xt, yt, x0, y0);
-          if (M_opt) {
-            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
-            printf(msg, x0, y0);
-          }
-          break;
-        }
-        dx1 = dir * delta * vxi / uv;
-        dy1 = dir * delta * vyi / uv;
-        if (verbose > 2) {
-          snprintf(msg, sizeof(msg), "#\tRK1: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
-                   fmt_f, fmt_f);
-          fprintf(stderr, msg, xt, yt, vxi, vyi, dx1, dy1);
         }
 
         /*
@@ -826,7 +792,7 @@ int main(int argc, char **argv) {
          */
         xt = xi + dx1 / 2.0;
         yt = yi + dy1 / 2.0;
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);  // (k2x, k2y)
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
           if (M_opt) {
@@ -854,9 +820,9 @@ int main(int argc, char **argv) {
         /*
          * RK-STEP 3
          */
-        xt = xi + dx2;
-        yt = yi + dy2;
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);
+        xt = xi + dx2 / 2.0;
+        yt = yi + dy2 / 2.0;
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);  // (k3x, k3y)
         if (isnan(vxi) || isnan(vyi)) {
           log_break_nan(xt, yt, x0, y0);
           if (M_opt) {
@@ -882,12 +848,42 @@ int main(int argc, char **argv) {
         }
 
         /*
-         * final RK-STEP update
+         * RK-STEP 4
+         */
+        xt = xi + dx3;
+        yt = yi + dy3;
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xt, yt, &vxi, &vyi, eps);  // (k4x, k4y)
+        if (isnan(vxi) || isnan(vyi)) {
+          log_break_nan(xt, yt, x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
+          break;
+        }
+        if ((uv = sqrt(vxi * vxi + vyi * vyi)) <= 0.0) {
+          log_break_zero(xt, yt, x0, y0);
+          if (M_opt) {
+            snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
+            printf(msg, x0, y0);
+          }
+          break;
+        }
+        dx4 = dir * delta * vxi / uv;
+        dy4 = dir * delta * vyi / uv;
+        if (verbose > 2) {
+          snprintf(msg, sizeof(msg), "#\tRK4: x=%s, y=%s, vx = %s, vy=%s, dx=%s, dy=%s\n", fmt_f, fmt_f, fmt_g, fmt_g,
+                   fmt_f, fmt_f);
+          fprintf(stderr, msg, xt, yt, vxi, vyi, dx4, dy4);
+        }
+
+        /*
+         * final RK-STEP (update)
          * x_{n+1} = x_{n} + h/6 (k_1 + 2*k_2 + 2*k_3 + k_4)
          *         = x_{n} + dx
          */
-        dx = (dx0 / 6.0 + dx1 / 3.0 + dx2 / 3.0 + dx3 / 6.0);
-        dy = (dy0 / 6.0 + dy1 / 3.0 + dy2 / 3.0 + dy3 / 6.0);
+        dx = (dx1 / 6.0 + dx2 / 3.0 + dx3 / 3.0 + dx4 / 6.0);
+        dy = (dy1 / 6.0 + dy2 / 3.0 + dy3 / 3.0 + dy4 / 6.0);
 
         /*
          * check final step
@@ -909,7 +905,7 @@ int main(int argc, char **argv) {
           break;
         }
 
-        /* final update of position */
+        /* advance position */
         xi += dx;
         yi += dy;
 
