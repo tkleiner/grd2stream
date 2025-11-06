@@ -175,7 +175,11 @@ if test "x${enable_gmt_api}" = "xyes"; then
    fi
 fi
 
-
+dnl We need git for gitversion.sh -> gitversion.h
+dnl Automake generates git_version.h only if Git is present.
+dnl Users building from tarball are safe, because git_version.h is already included and make clean doesn’t delete it.
+AC_CHECK_FILE([.git/HEAD], [GIT_EXISTS=yes], [GIT_EXISTS=no])
+AM_CONDITIONAL([BUILD_FROM_GIT], [test "$GIT_EXISTS" = yes])
 
 AC_CONFIG_FILES([Makefile m4/Makefile src/Makefile example/Makefile])
 AC_OUTPUT

@@ -1,7 +1,3 @@
-#ifndef LAST_UPDATE
-#define LAST_UPDATE "Time-stamp: <2025-10-28 10:02:27 (tkleiner)>"
-#endif
-
 /*
  * grd2stream
  * reads two 2-D gridded files which represents the  x-  and  y-
@@ -16,6 +12,8 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#include "git_version.h"  // PACKAGE_BUILD and PACKAGE_BRANCH
 
 #ifndef PACKAGE_VERSION
 #define PACKAGE_VERSION "none"
@@ -1219,6 +1217,8 @@ void version(void) {
   fprintf(stderr, ", GMT API version %u.%u.%u", gmt_major, gmt_minor, gmt_patch);
 #endif
   fprintf(stderr, ".\n");
+
+  printf("Built from branch %s (build %s).\n", PACKAGE_BRANCH, PACKAGE_BUILD);
 
   exit(0);
 }
