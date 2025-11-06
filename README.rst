@@ -79,7 +79,7 @@ Before you start to compile grd2stream, make sure gmt-config is in your ``PATH``
 
   tar xvfz grd2stream-X.X.X.tar.gz
   cd grd2stream-X.X.X
-  ./configure --enable-gmt-api
+  ./configure
   make && make install
 
 By default, grd2stream is installed in your ``$HOME`` folder.
@@ -89,7 +89,7 @@ You can specify a custom installation prefix:
 
 .. code-block:: console
 
-  ./configure --enable-gmt-api --prefix=/usr/local
+  ./configure --prefix=/usr/local
   make
   sudo make install
 
@@ -98,22 +98,17 @@ Alternatively install grd2stream into your GMT6 conda environment
 .. code-block:: console
 
   conda activate GMT6
-  ./configure --enable-gmt-api --prefix=$CONDA_PREFIX
+  ./configure --prefix=$CONDA_PREFIX
   make && make install
 
 If GMT is not available on your machine, grd2stream can still be used with
 with the the classic GMT grid file format (netCDF2).
 
-.. code-block:: console
-
-  ./configure
-  make && make install
-
 If gmt-config or nc-config can not be found by configure, you could specify the paths
 
 .. code-block:: console
 
-  ./configure --enable-gmt-api --with-gmt-config=/opt/local/lib/gmt6/bin/gmt-config --with-nc-config=/opt/local/bin/nc-config
+  ./configure --with-gmt-config=/opt/local/lib/gmt6/bin/gmt-config --with-nc-config=/opt/local/bin/nc-config
 
 
 **Install from Git repository**
@@ -125,7 +120,7 @@ This requires **GNU Autotools** (autoconf, automake, aclocal, libtool, and make)
   git clone https://github.com/tkleiner/grd2stream.git
   cd grd2stream
   ./bootsrap.sh
-  ./configure --enable-gmt-api
+  ./configure
   make && make install
 
 Packaging (Maintainer only)
