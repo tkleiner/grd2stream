@@ -1,10 +1,13 @@
 grd2stream
 ==========
 
-**grd2stream** is a command-line utility that performs 4th-order Runge–Kutta streamline
-integration from gridded 2D velocity fields. The program outputs streamline coordinates
-that can directly be used with the Generic Mapping Tools (`GMT <https://www.generic-mapping-tools.org/>`_)
-or QGIS for scientific visualization and mapping.
+**grd2stream** is a command-line utility for computing streamlines from gridded
+2D velocity fields using a fourth-order Runge–Kutta integration scheme.
+The program outputs streamline coordinates in OGR_GMT format,
+which can directly be used with the Generic Mapping Tools
+(`GMT <https://www.generic-mapping-tools.org/>`_) or `QGIS <https://qgis.org/>`_ for
+scientific visualization and mapping. The OGR_GMT format is a variant of GMT's
+ASCII format that supports additional geometry types and attributes via the GDAL/OGR library.
 
 Usage
 -----

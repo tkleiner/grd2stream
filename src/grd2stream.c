@@ -1173,7 +1173,7 @@ void usage(void) {
   fprintf(stderr,
           "\nDESCRIPTION:\n"
           "  %s - reads (x0,y0) pairs from standard input or xyfile (-f option)\n"
-          "  and generates polylines in multiple segment mode each starting at x0,y0.\n"
+          "  and generates polylines in multiple segment mode (OGR_GMT format) each starting at x0,y0.\n"
           "  Output: 'x y dist' (3 columns) to stdout.\n",
           program_name);
   fprintf(stderr,
