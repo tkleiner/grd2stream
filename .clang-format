@@ -1,52 +1,65 @@
 Language:        Cpp
 # BasedOnStyle:  Google
+
 AccessModifierOffset: -1
-AlignAfterOpenBracket: true
-AlignEscapedNewlinesLeft: true
+AlignAfterOpenBracket: Align             # ensures full alignment
+AlignEscapedNewlines: Left               # updated key, old behaviour
 AlignOperands:   true
 AlignTrailingComments: true
+
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: All
-AlwaysBreakAfterDefinitionReturnType: false
-AlwaysBreakTemplateDeclarations: true
+
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
 AlwaysBreakBeforeMultilineStrings: true
-BreakBeforeBinaryOperators: None
+
+BreakBinaryOperations: Never               # new in Clang 20; matches old behaviour
 BreakBeforeTernaryOperators: true
-BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeColon
+
 BinPackParameters: true
 BinPackArguments: true
+
 ColumnLimit:     120
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
+
 DerivePointerAlignment: false
 ExperimentalAutoDetectBinPacking: false
+
 IndentCaseLabels: true
 IndentWrappedFunctionNames: false
 IndentFunctionDeclarationAfterType: false
 MaxEmptyLinesToKeep: 1
 KeepEmptyLinesAtTheStartOfBlocks: false
 NamespaceIndentation: None
+
 ObjCBlockIndentWidth: 2
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: false
+
 PenaltyBreakBeforeFirstCallParameter: 1
 PenaltyBreakComment: 300
 PenaltyBreakString: 1000
 PenaltyBreakFirstLessLess: 120
 PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 200
+
 PointerAlignment: Right
 SpacesBeforeTrailingComments: 2
 Cpp11BracedListStyle: true
-Standard:        Cpp11
+
+Standard:        c++11
 IndentWidth:     2
 TabWidth:        2
 UseTab:          Never
 BreakBeforeBraces: Attach
+
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 SpacesInAngles:  false
@@ -56,7 +69,25 @@ SpaceAfterCStyleCast: false
 SpacesInContainerLiterals: true
 SpaceBeforeAssignmentOperators: true
 ContinuationIndentWidth: 4
+
 CommentPragmas:  '^ IWYU pragma:'
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 SpaceBeforeParens: ControlStatements
 DisableFormat:   false
+
+# Explicit defaults for Clang 20+ new keys:
+BreakInheritanceList: BeforeColon
+EmptyLineBeforeAccessModifier: LogicalBlock
+IndentAccessModifiers: false
+InsertTrailingCommas: None
+ReflowComments: true
+SortIncludes: true
+SortUsingDeclarations: true
+SeparateDefinitionBlocks: Leave
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+SpaceAroundPointerQualifiers: Default
+IndentExportBlock: false
+RemoveEmptyLinesInUnwrappedLines: false
+KeepFormFeed: false
+
