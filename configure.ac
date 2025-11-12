@@ -18,8 +18,8 @@ AM_INIT_AUTOMAKE([tar-pax])
 dnl canonical host-system: host, host_cpu, host_vendor, and host_os 
 AC_CANONICAL_HOST
 
-dnl Add support for the Dmalloc package. 
-dnl If the user runs configure with --with-dmalloc, then define WITH_DMALLOC and add -ldmalloc to LIBS. 
+dnl Add support for the Dmalloc package.
+dnl If the user runs configure with --with-dmalloc, then define WITH_DMALLOC and add -ldmalloc to LIBS.
 AM_WITH_DMALLOC
 
 dnl
@@ -33,9 +33,9 @@ fi
 AC_MSG_RESULT([$prefix])
 
 
-dnl 
+dnl
 dnl What should I build?
-dnl 
+dnl
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[Compile in debug mode @<:@default=no@:>@]),
     enable_debug=$enableval,
     enable_debug=no)
@@ -43,9 +43,9 @@ AM_CONDITIONAL(ENABLE_DEBUG, test "x${enable_debug}" == "xyes" )
 
 dnl this could dbe removed later, if api calls are tested
 AC_ARG_ENABLE(gmt-api,
-        AS_HELP_STRING([--enable-gmt-api],[try linking to gmt api@<:@default=no@:>@]),
+        AS_HELP_STRING([--enable-gmt-api],[try linking to gmt api@<:@default=yes@:>@]),
         [enable_gmt_api=$enableval],
-        [enable_gmt_api=no])
+        [enable_gmt_api=yes])
 
 # Checks for programs.
 AC_PROG_CC
@@ -169,32 +169,31 @@ if test "x${enable_gmt_api}" = "xyes"; then
    else
       if test "x${gmt_major_version}" = "x" ; then
          AC_MSG_WARN([GMT support disabled (missing/unusable library or header file)])
-      else 
+      else
          CPPFLAGS="$CPPFLAGS -DENABLE_GMT_API=${gmt_major_version}"
       fi
-   fi                                    
+   fi
 fi
 
-dnl
-dnl check for netcdf only if we don't use the gmt api
-dnl
+dnl We need git for gitversion.sh -> gitversion.h
+dnl Automake generates git_version.h only if Git is present.
+dnl Users building from tarball are safe, because git_version.h is already included and make clean doesn’t delete it.
+AC_CHECK_FILE([.git/HEAD], [GIT_EXISTS=yes], [GIT_EXISTS=no])
+AM_CONDITIONAL([BUILD_FROM_GIT], [test "$GIT_EXISTS" = yes])
 
-
-
-
-
-dnl
-dnl Checks for typedefs, structures, and compiler characteristics.
-dnl
-
-AC_CONFIG_FILES([Makefile \
-        m4/Makefile \
-	    src/Makefile \
-		example/Makefile \
-		])
+AC_CONFIG_FILES([Makefile m4/Makefile src/Makefile example/Makefile])
 AC_OUTPUT
 
-
+# ----------------------------------------------------------------------
+echo "Configure:"
+echo "  CC       : $CC"
+echo "  CFLAGS   : $CFLAGS"
+echo "  CPPFLAGS : $CPPFLAGS"
+echo "  LDFLAGS  : $LDFLAGS"
+echo "  LIBS     : $LIBS"
+echo "  ARGS     : ${ac_configure_args}"
+echo ""
+# ----------------------------------------------------------------------
 
 echo "*******************************************************************"
 echo "Configuration complete. Ensure \"make\" points to GNU Make."

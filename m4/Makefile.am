@@ -1,4 +1,1 @@
-##
-## Time-stamp: <2011-05-17 08:02:31 (u290047)>
-##
-# EXTRA_DIST = ax_openmp.m4
+EXTRA_DIST = ax_append_flag.m4  ax_check_compile_flag.m4
