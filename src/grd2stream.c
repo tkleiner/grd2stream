@@ -27,11 +27,10 @@
 #include <netcdf.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include <unistd.h>  // for system getopt.h
+// #include <unistd.h>  // for system getopt.h
 #include <errno.h>
+#include <limits.h>  // for UINT_MAX
 #include <string.h>
-#include <limits.h> // for UINT_MAX
-
 
 #include "debug_printf.h"
 #include "getopt.h"
@@ -56,8 +55,8 @@
  * using grid locations (i, j), (i + 1, j), (i, j + 1) and (i + 1, j + 1)
  *
  */
-static int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double *p_vy, double xi, double yi,
-                   double *p_vxi, double *p_vyi, double eps);
+static int interp2(size_t nx, size_t ny, const double *p_x, const double *p_y, const double *p_vx, const double *p_vy,
+                   double xi, double yi, double *p_vxi, double *p_vyi, double eps);
 
 /**
  * Given an array xx[1..n], and given a value x, returns a value j such that x is between xx[j] and xx[j+1].
@@ -66,7 +65,7 @@ static int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx,
  *
  * See "Numerical Recipies in C" 2nd Edition section "3.4 How to Search an Ordered Table"
  */
-static void locate(double *xx, size_t n, double x, size_t *j);
+static void locate(const double *xx, size_t n, double x, size_t *j);
 
 /**
  * print usage information and exit
@@ -196,11 +195,10 @@ void test_locate(void) {
   double xiv[] = {3.5, 2.0, 6.0, -1.0};    // test locations xi
   double xv[] = {0., 1., 2., 3., 4., 5.};  // x-vector
   const size_t nx = sizeof(xv) / sizeof(double);
-  double xi;
   size_t ixel;
 
   for (int i = 0; i < sizeof(xiv) / sizeof(double); i++) {
-    xi = xiv[i];
+    double xi = xiv[i];
     // printf("search xi = %.3f in x[0] = %.3f < xi < x[%lu] = %.3f\n", xi, xv[0], nx - 1, xv[nx - 1]);
     snprintf(msg, sizeof(msg), "search xi = %s in x[0] = %s < xi < x[%%lu] = %s\n", fmt_f, fmt_f, fmt_f);
     printf(msg, xi, xv[0], (unsigned long)(nx - 1), xv[nx - 1]);
@@ -241,12 +239,11 @@ static long parse_long(const char *s, const char *optname) {
   return val;
 }
 
-
 /** Helper: parse a long and verify it fits in unsigned int */
 static unsigned int parse_uint(const char *s, const char *optname) {
   char *end;
   errno = 0;
-  long val = strtol(s, &end, 10);
+  const long val = strtol(s, &end, 10);
 
   if (end == s || *end != '\0') {
     fprintf(stderr, "Invalid integer argument for %s: '%s'\n", optname, s);
@@ -261,14 +258,12 @@ static unsigned int parse_uint(const char *s, const char *optname) {
     exit(EXIT_FAILURE);
   }
   if ((unsigned long)val > UINT_MAX) {
-    fprintf(stderr, "Value too large for %s (max %u): '%s'\n",
-            optname, UINT_MAX, s);
+    fprintf(stderr, "Value too large for %s (max %u): '%s'\n", optname, UINT_MAX, s);
     exit(EXIT_FAILURE);
   }
 
   return (unsigned int)val;
 }
-
 
 /* for logging */
 const char *program_name = PACKAGE_NAME;
@@ -534,7 +529,7 @@ int main(int argc, char **argv) {
     freq = 1;
   } else {
     freq = 1;
-    dout = MIN(x_inc, y_inc) / ((double)5);
+    dout = MIN(x_inc, y_inc) / (double)5;
   }
   delta_initial = dout / ((double)freq);
 
@@ -557,7 +552,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, msg, p_yc[0], p_yc[nby - 1], yb_inc, nby);
   }
 
-  if ((delta_initial > x_inc) || (delta_initial > y_inc)) {
+  if ((delta_initial > x_inc) || delta_initial > y_inc) {
     snprintf(msg, sizeof(msg), "WARN: Step size too large: %s > (%s, %s)\n", fmt_f, fmt_f, fmt_f);
     fprintf(stderr, msg, delta_initial, x_inc, y_inc);
   }
@@ -585,6 +580,7 @@ int main(int argc, char **argv) {
       /* if(verbose) fprintf(stderr,"skip header\n"); */
     } else {
       if (L_opt) {
+        // todo: use strtod() instead of sscanf() to detect conversion errors
         if (3 != sscanf(line, "%lf %lf %lf", &x0, &y0, &dir)) {
           fprintf(stderr,
                   "ERROR: Mismatch between actual and expected fields near "
@@ -595,6 +591,7 @@ int main(int argc, char **argv) {
         dir = (dir < 0.0) ? -1.0 : 1.0;
 
       } else {
+        // todo: use strtod() instead of sscanf() to detect conversion errors
         if (2 != sscanf(line, "%lf %lf", &x0, &y0)) {
           fprintf(stderr,
                   "ERROR: Mismatch between actual and expected fields near "
@@ -614,7 +611,7 @@ int main(int argc, char **argv) {
        *
        ******************************************************************/
 
-      if ((x0 > p_x[nx - 1]) || (y0 > p_y[ny - 1]) || (x0 < p_x[0]) || (y0 < p_y[0])) {
+      if (x0 > p_x[nx - 1] || y0 > p_y[ny - 1] || x0 < p_x[0] || y0 < p_y[0]) {
         if (log_breaks) {
           snprintf(msg, sizeof(msg),
                    "Stop: Seed (%s, %s) is outside valid region "
@@ -650,11 +647,10 @@ int main(int argc, char **argv) {
        * Points at current streamline
        */
       for (iter = 0; iter < maxiter; iter++) {
-
         /*
          * STEP 1 (get initial velocity data at requested point)
          */
-        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi, eps); // (k1x, k1y)
+        (void)interp2(nx, ny, p_x, p_y, p_vx, p_vy, xi, yi, &vxi, &vyi, eps);  // (k1x, k1y)
         if (verbose > 1) {
           snprintf(msg, sizeof(msg), "#S: x = %s, y = %s, vx = %s, vy = %s\n", fmt_f, fmt_f, fmt_g, fmt_g);
           fprintf(stderr, msg, xi, yi, vxi, vyi);
@@ -662,8 +658,8 @@ int main(int argc, char **argv) {
 
         /* check if mask reached */
         if (M_opt > 0) {
-          im = (size_t)(((xi - p_xm[0]) / xm_inc));
-          jm = (size_t)(((yi - p_ym[0]) / ym_inc));
+          im = (size_t)((xi - p_xm[0]) / xm_inc);
+          jm = (size_t)((yi - p_ym[0]) / ym_inc);
           mask_val = p_mask[jm * nxm + im];
         }
 
@@ -742,7 +738,7 @@ int main(int argc, char **argv) {
         }
 
         /* advance now */
-        dist += (delta * dir);
+        dist += delta * dir;
         dx1 = dir * delta * vxi / uv; /* if vxi > 0 && dir <= 0, then dx0 is already negative */
         dy1 = dir * delta * vyi / uv; /* if vyi > 0 && dir <= 0, then dy0 is already negative */
         itime += delta / uv;
@@ -886,7 +882,7 @@ int main(int argc, char **argv) {
         /*
          * check final step
          */
-        if ((xi + dx > p_x[nx - 1]) || (xi + dx < p_x[0])) {
+        if (xi + dx > p_x[nx - 1] || (xi + dx < p_x[0])) {
           log_break_dx(xi + dx, x0, y0);
           if (M_opt) {
             snprintf(msg, sizeof(msg), "#M# %s %s NaN\n", fmt_f, fmt_f);
@@ -983,7 +979,7 @@ int main(int argc, char **argv) {
 
   /* write blank array for later usage */
   if (B_opt && NULL != p_blank_name) {
-    grdwrite(p_blank_name, nbx, nby, p_xc, p_yc, (void *)blank, NC_INT);
+    grdwrite(p_blank_name, nbx, nby, p_xc, p_yc, blank, NC_INT);
   }
 
   if (fp != stdin)
@@ -1023,14 +1019,10 @@ int main(int argc, char **argv) {
  * See also https://github.com/JuliaMath/Interpolations.jl/issues/192
  *          https://github.com/scipy/scipy/issues/11381
  */
-int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double *p_vy, double xi, double yi,
-            double *p_vxi, double *p_vyi, double eps) {
+int interp2(size_t nx, const size_t ny, const double *p_x, const double *p_y, const double *p_vx, const double *p_vy,
+            double xi, double yi, double *p_vxi, double *p_vyi, double eps) {
   size_t ixel = 0, iyel = 0;   /* where we are */
   size_t ixel1 = 0, iyel1 = 0; /* the next */
-  size_t i00, i01, i10, i11;
-  double p1, p2, q1, q2;
-  double xinc, yinc;
-  double xerr, yerr;
 
   debug_printf(DEBUG_INFO, "search xi = %.3f in x[%lu] = %.3f < xi < x[%lu] = %.3f\n", xi, 0, p_x[0], nx - 1,
                p_x[nx - 1]);
@@ -1062,19 +1054,19 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   ixel1 = MIN(ixel + 1, nx - 1);
   iyel1 = MIN(iyel + 1, ny - 1);
 
-  xinc = fabs(p_x[ixel1] - p_x[ixel]);
-  yinc = fabs(p_y[iyel1] - p_y[iyel]);
+  double xinc = fabs(p_x[ixel1] - p_x[ixel]);
+  double yinc = fabs(p_y[iyel1] - p_y[iyel]);
   debug_printf(DEBUG_INFO, "found xinc = %.3f, yinc = %.3f\n", xinc, yinc);
 
   /* index in two-dimensional data array */
-  i00 = (iyel) * (nx) + ixel;
-  i01 = (iyel) * (nx) + ixel1;
-  i10 = (iyel1) * (nx) + ixel;
-  i11 = (iyel1) * (nx) + ixel1;
+  size_t i00 = (iyel) * (nx) + ixel;
+  size_t i01 = (iyel) * (nx) + ixel1;
+  size_t i10 = (iyel1) * (nx) + ixel;
+  size_t i11 = (iyel1) * (nx) + ixel1;
 
   /* check if we are on the grid */
-  xerr = fabs(xi - p_x[ixel]);
-  yerr = fabs(yi - p_y[iyel]);
+  double xerr = fabs(xi - p_x[ixel]);
+  double yerr = fabs(yi - p_y[iyel]);
   debug_printf(DEBUG_INFO, "Found xerr = %.3f, yerr = %.3f\n", xerr, yerr);
   if (xerr < eps * xinc && yerr < eps * yinc) {
     debug_printf(DEBUG_INFO, "Point is on grid -> early exit interp2(...)\n");
@@ -1094,15 +1086,15 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   debug_printf(DEBUG_INFO, "vy[i11] =  %.3g\n", p_vy[i11]);
 
   // linear interpolation between the lower two quadrants along the X axis
-  p1 = p_vx[i00] + (xi - p_x[ixel]) * (p_vx[i10] - p_vx[i00]) / (p_x[ixel + 1] - p_x[ixel]);
+  double p1 = p_vx[i00] + (xi - p_x[ixel]) * (p_vx[i10] - p_vx[i00]) / (p_x[ixel + 1] - p_x[ixel]);
   // linear interpolation between the upper two quadrants along the X axis
-  q1 = p_vx[i01] + (xi - p_x[ixel]) * (p_vx[i11] - p_vx[i01]) / (p_x[ixel + 1] - p_x[ixel]);
+  double q1 = p_vx[i01] + (xi - p_x[ixel]) * (p_vx[i11] - p_vx[i01]) / (p_x[ixel + 1] - p_x[ixel]);
   // linear interpolation between the two virtual points p1 and q1 along the Y axis
   (*p_vxi) = p1 + (yi - p_y[iyel]) * (q1 - p1) / (p_y[iyel + 1] - p_y[iyel]);
 
-  p2 = p_vy[i00] + (xi - p_x[ixel]) * (p_vy[i10] - p_vy[i00]) / (p_x[ixel + 1] - p_x[ixel]);
+  double p2 = p_vy[i00] + (xi - p_x[ixel]) * (p_vy[i10] - p_vy[i00]) / (p_x[ixel + 1] - p_x[ixel]);
 
-  q2 = p_vy[i01] + (xi - p_x[ixel]) * (p_vy[i11] - p_vy[i01]) / (p_x[ixel + 1] - p_x[ixel]);
+  double q2 = p_vy[i01] + (xi - p_x[ixel]) * (p_vy[i11] - p_vy[i01]) / (p_x[ixel + 1] - p_x[ixel]);
 
   (*p_vyi) = p2 + (yi - p_y[iyel]) * (q2 - p2) / (p_y[iyel + 1] - p_y[iyel]);
 
@@ -1112,17 +1104,13 @@ int interp2(size_t nx, size_t ny, double *p_x, double *p_y, double *p_vx, double
   return EXIT_SUCCESS;
 } /* interp2 */
 
-void locate(double *xx, size_t n, double x, size_t *j) {
-  /* fast search
-   * table lookup */
-  size_t iu, im, il;
-  int ascnd;
-
-  il = 0;
-  iu = n - 1;
-  ascnd = (xx[n - 1] >= xx[0]);
+void locate(const double *xx, size_t n, double x, size_t *j) {
+  /* fast search table lookup */
+  size_t il = 0;
+  size_t iu = n - 1;
+  int ascnd = xx[n - 1] >= xx[0];
   while (iu - il > 1) {
-    im = (iu + il) >> 1;
+    size_t im = (iu + il) >> 1;
     if (x >= xx[im] == ascnd)
       il = im;
     else
