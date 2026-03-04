@@ -29,11 +29,11 @@
 #include <stdlib.h>
 // #include <unistd.h>  // for system getopt.h
 #include <errno.h>
+#include <getopt.h>
 #include <limits.h>  // for UINT_MAX
 #include <string.h>
 
 #include "debug_printf.h"
-#include "getopt.h"
 #include "grdio.h"
 #include "log.h"
 
@@ -326,7 +326,6 @@ int main(int argc, char **argv) {
   FILE *fp = NULL;
   char line[BUFSIZ];
 
-  int oc, err = 0;
   int b_opt = 0; /* backward steps */
   int d_opt = 0; /* delta */
   int k_opt = 4; /* Runge Kutta 4 */
@@ -341,6 +340,14 @@ int main(int argc, char **argv) {
   int M_opt = 0;     /* read MASK */
   double eps = 1e-3; /* relative distance error for a point to be considered at the grid */
 
+  int oc, err;
+  int option_index = 0;
+
+  struct option long_options[] = {
+      {"help", no_argument, 0, 'h'}, {"version", no_argument, 0, 'v'}, {"verbose", no_argument, 0, 'V'}, {0, 0, 0, 0}
+      // terminator
+  };
+
   /* Initialize logging facility */
   /*  log_initialize(opt_nodaemon ? LOG_TO_STDERR : LOG_TO_SYSLOG);*/
 
@@ -350,7 +357,7 @@ int main(int argc, char **argv) {
 #endif
 
   /* parse commandline args */
-  while ((oc = getopt(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:e:F:G:")) != -1)
+  while ((oc = getopt_long(argc, argv, "tbd:lhvk:n:f:VLDrM:B:T:e:F:G:", long_options, &option_index)) != -1) {
     switch (oc) {
       case 'e':
         eps = parse_double(optarg, "-e");
@@ -383,7 +390,6 @@ int main(int argc, char **argv) {
       case 'd':
         /* output step size */
         d_opt = 1;
-        // dout = (double)atof(optarg);
         dout = parse_double(optarg, "-d");
         break;
       case 'F':
@@ -394,21 +400,12 @@ int main(int argc, char **argv) {
         /* data format */
         set_general_format(optarg);
         break;
-      case 'h':
-        /* help */
-        usage();
-        break;
-      case 'v':
-        /* version */
-        version();
-        break;
       case 'k':
         /* stepping */
         k_opt = (int)parse_long(optarg, "-k");
         break;
       case 'n':
         /* maximum number of steps allowed */
-        // maxiter = (unsigned int) parse_long(optarg, "-n");
         maxiter = parse_uint(optarg, "-n");
         break;
       case 'f':
@@ -425,20 +422,28 @@ int main(int argc, char **argv) {
         B_opt = 1;
         p_blank_name = optarg;
         break;
-      case 'V':
-        /* verbose opttion */
-        verbose++;
-        break;
       case 'r':
-        /* verbose opttion */
+        /* log breaks */
         log_breaks = 1;
         break;
+      case 'h':  // short or long --help
+        usage();
+        break;
+      case 'v':  // short or long --version
+        version();
+        break;
+      case 'V':  // short or long --verbose
+        verbose++;
+        break;
+
       case '?':
-        fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+        // getopt_long prints its own error message for unknown options
+        // fprintf(stderr, "Unknown option `-%c'.\n", optopt);
         return 1;
       default:
         abort();
     }
+  }
 
   if ((argc - optind) != 2)
     usage();
@@ -1150,13 +1155,13 @@ void usage(void) {
           "  -t                  output format: 'x y dist v_x v_y time' (6 columns)\n"
           "  -T maxtime          maximum integration time (default: none)\n"
           "  -n maxsteps         maximum number of steps (default: %d)\n"
-          "  -V                  verbose output\n"
           "  -r                  report why a streamline stopped to stderr "
           "(default: off)\n"
           "  -F fmt_f            format for coordinates (default: %s)\n"
           "  -G fmt_g            format for data (default: %s)\n"
-          "  -v                  version\n"
-          "  -h                  help\n\n",
+          "  -V, --verbose       verbose output\n"
+          "  -v, --version       version\n"
+          "  -h, --help          help\n\n",
           MAXSTEPS, fmt_f, fmt_g);
   fprintf(stderr,
           "\nDESCRIPTION:\n"
