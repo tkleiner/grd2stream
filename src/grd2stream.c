@@ -31,9 +31,9 @@
 #include <errno.h>
 #include <limits.h>  // for UINT_MAX
 #include <string.h>
+#include <getopt.h>
 
 #include "debug_printf.h"
-#include "getopt.h"
 #include "grdio.h"
 #include "log.h"
 

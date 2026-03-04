@@ -63,6 +63,8 @@ Note, you can have gmt4 and gmt6 installed at the same time without interference
 
     sudo port install gdal +netcdf+hdf5
     sudo port install gmt6 +gdal
+    # use GNU version of getopt on macOS (optional)
+    sudo port install libgnugetopt
 
 **Installing required libraries using Conda**
 

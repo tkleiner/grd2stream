@@ -105,6 +105,29 @@ AC_SEARCH_LIBS(nc_open, netcdf, [],
     AC_MSG_ERROR([netcdf library was not linked - defining LDFLAGS may help]))
 
 
+# -----------------------------
+# Check for getopt
+# $ sudo port install libgnugetopt
+# -----------------------------
+# Check for getopt header (let AC_CHECK_HEADERS print the message)
+AC_CHECK_HEADERS([getopt.h],
+    [have_getopt_h=yes],
+    [AC_MSG_ERROR([getopt.h not found; cannot compile])])
+
+# Check for GNU getopt library first
+AC_CHECK_LIB([gnugetopt], [getopt_long],
+    [have_getopt_lib=yes
+     LIBS="$LIBS -lgnugetopt"
+     AC_SUBST(GETOPT_LIBS)
+     AC_DEFINE([USE_GNU_GETOPT], [1], [Using GNU getopt])],
+    [ # fallback: check system getopt_long
+      AC_CHECK_FUNCS([getopt_long],
+          [have_getopt_lib=yes
+           GETOPT_LIBS=""
+           AC_SUBST(GETOPT_LIBS)
+           AC_MSG_NOTICE([Using system getopt_long()])],
+          [AC_MSG_ERROR([getopt_long() not found; cannot compile])])
+    ])
 
 
 #-------------------------------------------------------------------------------#
